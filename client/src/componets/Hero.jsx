@@ -56,7 +56,7 @@ const Hero = () => {
   ];
 
   return (
-    <section className="relative w-full min-h-screen flex flex-col items-center justify-center overflow-hidden bg-white dark:bg-transparent selection:bg-emerald-500/30">
+    <section className="relative w-full min-h-screen flex flex-col pt-12 items-center justify-center overflow-hidden bg-white dark:bg-transparent selection:bg-emerald-500/30">
       <div className="absolute inset-0 w-full h-full dark:bg-grid-white/[0.04] bg-grid-black/[0.03] pointer-events-none" />
 
       <motion.div

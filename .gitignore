@@ -20,6 +20,16 @@ pnpm-debug.log*
 /server/dist
 /server/build
 
+# Service account keys (Server)
+serviceAccountKey.json
+firebaseServiceAccount.json
+google-service-account.json
+
+# Any JSON key inside server
+/server/**/*.json
+!/server/package.json
+!/server/package-lock.json
+
 # OS / Editor
 .DS_Store
 Thumbs.db
