@@ -1,0 +1,27 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files (all environments)
+.env
+.env.*
+!.env.example
+
+# Client
+/client/node_modules/
+/client/dist
+/client/.vite
+
+# Server
+/server/node_modules/
+/server/dist
+/server/build
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
