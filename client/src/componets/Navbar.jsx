@@ -79,33 +79,16 @@ const Navbar = () => {
               onClick={() => navigate("/")}
               className="flex items-center space-x-3 cursor-pointer select-none group"
             >
-              <div className="relative flex items-center">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gray-200 dark:bg-white/5 rounded-xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                  <div className="relative overflow-hidden bg-gray-100 dark:bg-black/5 backdrop-blur-sm border border-gray-300 dark:border-black/10 rounded-2xl px-4 py-1">
-                    <img
-                      src={logo}
-                      alt="EduIITia logo"
-                      className="relative z-10 h-12 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300"
-                    />
-
-                    <motion.div
-                      className="absolute top-0 left-0 w-1/2 h-full bg-linear-to-r from-transparent via-gray-400/20 dark:via-white/20 to-transparent skew-x-[-25deg]"
-                      initial={{ x: "-200%" }}
-                      animate={{ x: "200%" }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 2,
-                        repeatDelay: 4,
-                        ease: "easeInOut",
-                      }}
-                    />
-                  </div>
-                </div>
+              <div className="relative flex items-center gap-2">
+                <div className="absolute inset-0 bg-emerald-500/20 dark:bg-emerald-400/10 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <img
+                  src={logo}
+                  alt="EduIITia logo"
+                  className="h-10 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300"
+                />
 
                 {hasActiveSubscription && (
-                  <span className="ml-2 self-center text-[10px] uppercase tracking-wider bg-linear-to-r from-amber-300 to-orange-500 text-black font-extrabold px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-linear-to-r from-amber-400 to-orange-500 text-black px-2.5 py-1 rounded-full shadow-lg">
                     PRO
                   </span>
                 )}
@@ -135,7 +118,7 @@ const Navbar = () => {
                 className="hidden sm:block p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                 title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
               >
-                {theme === "dark" ? <Moon size={18} /> : <Sun size={18} /> }
+                {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
               </button>
               {!user ? (
                 <>
