@@ -92,7 +92,7 @@ const Pricing = () => {
         key: checkoutResult.key,
         amount: checkoutResult.amount,
         currency: checkoutResult.currency,
-        name: "ChemT",
+        name: "EduIITia",
         description: `${checkoutResult.plan.name} Plan`,
         order_id: checkoutResult.orderId,
         theme: { color: "#6366F1" },
@@ -127,7 +127,7 @@ const Pricing = () => {
           }
         },
         prefill: {
-          name: user?.name || user?.displayName || "ChemT Student",
+          name: user?.name || user?.displayName || "EduIITia Student",
           email: user?.email || "user@example.com",
           contact: user?.phone || "9999999999",
         },
@@ -158,7 +158,7 @@ const Pricing = () => {
       className="min-h-screen bg-white dark:bg-transparent text-gray-900 dark:text-white py-20 px-5 relative overflow-hidden font-inter"
     >
       <div className="text-center mx-auto max-w-7xl py-10 px-5 relative z-10">
-        <h1 className="text-4xl md:text-6xl font-extrabold bg-linear-to-r from-emerald-300 via-teal-400 to-cyan-500 bg-clip-text text-transparent mb-4 tracking-tighter">
+        <h1 className="text-4xl py-3 md:text-6xl font-extrabold bg-linear-to-r from-emerald-300 via-teal-400 to-cyan-500 bg-clip-text text-transparent mb-4 tracking-tighter">
           Pricing Plans That Fit You
         </h1>
         <p className="text-gray-600 dark:text-gray-400 text-xl max-w-3xl mx-auto">
@@ -166,13 +166,38 @@ const Pricing = () => {
           unlimited practice, and intelligent analytics.
         </p>
       </div>
-      {plans.length === 0 || refreshing ? (
+      {refreshing ? (
         <div className="text-center py-20">
           <p className="text-emerald-600 dark:text-emerald-400 text-xl animate-pulse">
-            {refreshing
-              ? "Loading subscription status..."
-              : "Loading pricing plans..."}
+            Loading subscription status...
           </p>
+        </div>
+      ) : plans.length === 0 ? (
+        <div className="text-center py-20">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
+              <svg
+                className="w-10 h-10 text-gray-400 dark:text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              No Plans Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Pricing plans are not available at the moment. Please check back
+              later.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto relative z-10 p-4">

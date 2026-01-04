@@ -82,10 +82,6 @@ const Analytics = () => {
       </div>
 
       <div className="mb-8 p-6 bg-[#0f172a] rounded-xl border border-white/10 shadow-xl">
-        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-          <TrendingUp size={20} className="text-emerald-400" />
-          Monthly Revenue Trend
-        </h2>
         <Chart monthlyData={stats.monthlyRevenue || {}} />
       </div>
 

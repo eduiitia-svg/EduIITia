@@ -82,7 +82,7 @@ const LoginModal = ({
               Welcome Back
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Login to continue your ChemT learning journey
+              Login to continue your EduIITia learning journey
             </p>
           </div>
 

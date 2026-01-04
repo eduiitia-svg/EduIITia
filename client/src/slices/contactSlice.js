@@ -24,7 +24,7 @@ export const sendContactEmail = createAsyncThunk(
                         <tr>
                           <td>
                             <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">New Inquiry</h1>
-                            <p style="margin: 5px 0 0; font-size: 14px; color: #cbd5e1;">Received from ChemT Contact Form</p>
+                            <p style="margin: 5px 0 0; font-size: 14px; color: #cbd5e1;">Received from EduIITia Contact Form</p>
                           </td>
                           <td align="right">
                             <span style="background-color: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 6px; color: #ffffff; font-size: 12px; font-weight: 600;">ADMIN</span>
@@ -77,7 +77,7 @@ export const sendContactEmail = createAsyncThunk(
 
                   <tr>
                     <td style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-                      <p style="margin: 0; font-size: 12px; color: #94a3b8;">Sent via ChemT Contact System • ${new Date().toLocaleDateString()}</p>
+                      <p style="margin: 0; font-size: 12px; color: #94a3b8;">Sent via EduIITia Contact System • ${new Date().toLocaleDateString()}</p>
                     </td>
                   </tr>
                 </table>
@@ -124,7 +124,7 @@ export const sendContactEmail = createAsyncThunk(
                   <tr>
                     <td style="padding: 30px 40px 40px;">
                       <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #374151;">
-                        This is an automatic confirmation that your message has been successfully delivered to the <strong>ChemT</strong> support team. 
+                        This is an automatic confirmation that your message has been successfully delivered to the <strong>EduIITia</strong> support team. 
                       </p>
                       
                       <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #374151;">
@@ -142,7 +142,7 @@ export const sendContactEmail = createAsyncThunk(
 
                   <tr>
                     <td style="background-color: #111827; padding: 32px 40px; text-align: center;">
-                      <p style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #ffffff;">ChemT</p>
+                      <p style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #ffffff;">EduIITia</p>
                       <p style="margin: 0 0 24px; font-size: 13px; color: #9ca3af; line-height: 1.5;">
                         Empowering communities to learn, connect, and grow together.
                       </p>
@@ -169,7 +169,7 @@ export const sendContactEmail = createAsyncThunk(
 
       await axios.post(`${import.meta.env.VITE_API_URL}/api/sendEmail`, {
         to: email,
-        subject: "Message Received! 🚀 - ChemT Support",
+        subject: "Message Received! 🚀 - EduIITia Support",
         html: userEmailHTML,
       });
 

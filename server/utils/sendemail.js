@@ -22,7 +22,7 @@ async function sendEmailHandler(req, res) {
     }
 
     const mailOptions = {
-      from: `"ChemT" <${process.env.EMAIL_USER}>`,
+      from: `"EduIITia" <${process.env.EMAIL_USER}>`,
       to: to,
       subject: subject,
       html: html,

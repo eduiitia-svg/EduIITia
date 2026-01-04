@@ -17,7 +17,7 @@ const CustomTooltip = ({ active, payload, label }) => {
       <div className="p-3 bg-black/80 backdrop-blur-sm border border-emerald-500 rounded-lg shadow-xl">
         <p className="text-sm font-semibold text-white mb-1">{`Month: ${label}`}</p>
         <p className="text-sm text-emerald-400">
-          {`Revenue: ₹${(payload[0].value / 100).toLocaleString()}`}
+          {`Revenue: ₹${(payload[0].value).toLocaleString()}`}
         </p>
       </div>
     );
@@ -44,9 +44,6 @@ const Chart = ({ monthlyData }) => {
           <TrendingUp size={20} className="text-cyan-400" />
           Monthly Revenue Trend
         </h3>
-        <p className="text-sm text-slate-500 flex items-center gap-1">
-          <Clock size={16} /> Last 6 Months
-        </p>
       </div>
 
       <div style={{ width: "100%", height: 320 }}>

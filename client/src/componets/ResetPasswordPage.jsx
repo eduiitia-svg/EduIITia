@@ -110,7 +110,7 @@ const ResetPasswordPage = () => {
         </form>
 
         <p className="text-center text-gray-400 dark:text-gray-500 text-xs mt-6">
-          © {new Date().getFullYear()} ChemT | All rights reserved
+          © {new Date().getFullYear()} EduIITia | All rights reserved
         </p>
       </div>
     </div>

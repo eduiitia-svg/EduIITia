@@ -19,12 +19,11 @@ const Testimonials = () => {
           id: doc.id,
           ...doc.data(),
         }));
-        setTestimonials(testimonialsData);
-      } catch (error) {
-        console.error("Error fetching testimonials:", error);
-        setTestimonials([
+
+        // Default testimonials
+        const defaultTestimonials = [
           {
-            id: 1,
+            id: "default-1",
             name: "Yeray Rosales",
             role: "UI Design",
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Yeray",
@@ -33,7 +32,7 @@ const Testimonials = () => {
             rating: 4.85,
           },
           {
-            id: 2,
+            id: "default-2",
             name: "Lew Silverton",
             role: "Digital Marketing",
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lew",
@@ -42,7 +41,47 @@ const Testimonials = () => {
             rating: 4.85,
           },
           {
-            id: 3,
+            id: "default-3",
+            name: "Neville Griffin",
+            role: "Engineering",
+            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Neville",
+            text: "Skeptical about online learning at first, but the quality of customer support and course content made me decide to become a long-term subscriber.",
+            time: "2 Months ago",
+            rating: 4.85,
+          },
+        ];
+
+        // If testimonials exist, combine them with defaults
+        // If no testimonials, just use defaults
+        if (testimonialsData.length > 0) {
+          setTestimonials([...testimonialsData, ...defaultTestimonials]);
+        } else {
+          setTestimonials(defaultTestimonials);
+        }
+      } catch (error) {
+        console.error("Error fetching testimonials:", error);
+        // On error, show default testimonials
+        setTestimonials([
+          {
+            id: "default-1",
+            name: "Yeray Rosales",
+            role: "UI Design",
+            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Yeray",
+            text: "I believe in lifelong learning and this is the best place to learn from the experts with step by step learning courses. I've learned a lot and recommended it to all of my friends.",
+            time: "12 Days ago",
+            rating: 4.85,
+          },
+          {
+            id: "default-2",
+            name: "Lew Silverton",
+            role: "Digital Marketing",
+            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lew",
+            text: "I really like the content they've offered for marketing and sales. I've purchased many classes and all of them are really good.",
+            time: "1 Month ago",
+            rating: 4.85,
+          },
+          {
+            id: "default-3",
             name: "Neville Griffin",
             role: "Engineering",
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Neville",

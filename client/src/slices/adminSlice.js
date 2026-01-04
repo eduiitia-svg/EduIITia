@@ -226,7 +226,7 @@ export const approveRegistrationRequest = createAsyncThunk(
 
       await axios.post(`${import.meta.env.VITE_API_URL}/api/sendEmail`, {
         to: requestData.email,
-        subject: "Registration Approved - Welcome to ChemT",
+        subject: "Registration Approved - Welcome to EduIITia",
         html: approvalHTML,
       });
 
@@ -468,7 +468,7 @@ export const createAdmin = createAsyncThunk(
                 margin-bottom: 16px;
                 text-align: center;
               ">
-                Welcome to ChemT Admin Panel
+                Welcome to EduIITia Admin Panel
               </h2>
               <p style="font-size: 15px; color: #334155; margin-bottom: 12px;">
                 Hi <strong>${name}</strong>,
@@ -563,7 +563,7 @@ export const createAdmin = createAsyncThunk(
 
       axios.post(`${import.meta.env.VITE_API_URL}/api/sendEmail`, {
         to: email,
-        subject: "Welcome to ChemT - Admin Access",
+        subject: "Welcome to EduIITia - Admin Access",
         html: adminWelcomeHTML,
       });
 

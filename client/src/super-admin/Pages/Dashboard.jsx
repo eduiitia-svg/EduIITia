@@ -10,6 +10,7 @@ import DashboardSkeleton from "../../componets/skeleton/DashboardSkeleton";
 const Dashboard = () => {
   const dispatch = useDispatch();
   const { stats, loading } = useSelector((state) => state.orders);
+  console.log("stats ", stats);
 
   useEffect(() => {
     fetchStats();
@@ -24,6 +25,31 @@ const Dashboard = () => {
     }
   };
 
+  const calculatePercentageChange = (current, previous) => {
+    if (!previous || previous === 0) return 0;
+    return ((current - previous) / previous) * 100;
+  };
+
+  const getMonthlyComparison = () => {
+    if (!stats?.monthlyRevenue) return { current: 0, previous: 0, change: 0 };
+
+    const months = Object.keys(stats.monthlyRevenue).sort();
+    const currentMonth = months[months.length - 1];
+    const previousMonth = months[months.length - 2];
+
+    const current = stats.monthlyRevenue[currentMonth] || 0;
+    const previous = stats.monthlyRevenue[previousMonth] || 0;
+    const change = calculatePercentageChange(current, previous);
+
+    return { current, previous, change };
+  };
+
+  const monthlyComparison = getMonthlyComparison();
+  const weeklyChange = calculatePercentageChange(
+    stats?.weeklyRevenue,
+    stats?.totalRevenue - stats?.weeklyRevenue
+  );
+
   return (
     <div>
       <h1 className="text-3xl font-extrabold mb-8 text-transparent bg-clip-text bg-linear-to-r from-emerald-400 to-cyan-300">
@@ -31,19 +57,23 @@ const Dashboard = () => {
       </h1>
 
       {loading || !stats ? (
-      <DashboardSkeleton />
+        <DashboardSkeleton />
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard
               title="Total Revenue"
               value={`₹${((stats.totalRevenue || 0) / 100).toLocaleString()}`}
-              subtitle="+12.5% vs last month"
+              subtitle={`${
+                monthlyComparison.change >= 0 ? "+" : ""
+              }${monthlyComparison.change.toFixed(1)}% vs last month`}
             />
             <StatsCard
               title="Weekly Revenue"
               value={`₹${((stats.weeklyRevenue || 0) / 100).toLocaleString()}`}
-              subtitle="+3.2% vs last week"
+              subtitle={`${weeklyChange >= 0 ? "+" : ""}${weeklyChange.toFixed(
+                1
+              )}% vs last week`}
             />
             <StatsCard
               title="Total Users"

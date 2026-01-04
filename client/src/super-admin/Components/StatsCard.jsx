@@ -1,11 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import {
-  TrendingUp,
-  Users,
-  DollarSign,
-  ShieldCheck,
-} from "lucide-react";
+import { TrendingUp, Users, DollarSign, ShieldCheck } from "lucide-react";
 
 const getIconAndColor = (title) => {
   const lowerTitle = title.toLowerCase();
@@ -87,8 +82,30 @@ const StatsCard = ({ title, value, subtitle }) => {
       {subtitle && (
         <div className="mt-4 pt-3 border-t border-white/5">
           <div className="text-sm text-slate-500 flex items-center gap-1">
-            <TrendingUp size={16} className="text-emerald-500" />
-            <span className="text-emerald-300 font-semibold">{subtitle}</span>
+            <TrendingUp
+              size={16}
+              className={
+                subtitle.startsWith("+")
+                  ? "text-emerald-500"
+                  : subtitle.startsWith("-")
+                  ? "text-red-500"
+                  : "text-slate-500"
+              }
+              style={{
+                transform: subtitle.startsWith("-") ? "rotate(180deg)" : "none",
+              }}
+            />
+            <span
+              className={
+                subtitle.startsWith("+")
+                  ? "text-emerald-300 font-semibold"
+                  : subtitle.startsWith("-")
+                  ? "text-red-300 font-semibold"
+                  : "text-slate-400"
+              }
+            >
+              {subtitle}
+            </span>
           </div>
         </div>
       )}
