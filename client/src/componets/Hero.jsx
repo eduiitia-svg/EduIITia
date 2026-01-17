@@ -138,17 +138,24 @@ const Hero = () => {
               </span>
             </h1>
 
-            <div className="h-8 sm:h-10 flex items-center justify-center gap-1">
-              <span className="text-xl sm:text-2xl text-gray-500 dark:text-gray-400 font-light tracking-tight">
-                {typedText}
+            <div className="flex flex-col items-center justify-center gap-2">
+              <span className="text-xl sm:text-2xl text-gray-500 dark:text-gray-400 font-bold tracking-tight text-center">
+                Create. Practice. Analyze. Succeed.
               </span>
-              <motion.span
-                animate={{ opacity: [1, 0] }}
-                transition={{ duration: 0.8, repeat: Infinity }}
-                className={`w-0.5 h-6 bg-emerald-500 ${
-                  isTypingDone ? "opacity-50" : ""
-                }`}
-              />
+
+              <div className="flex items-center">
+                <span className="text-xl sm:text-2xl text-gray-500 dark:text-gray-400 font-light tracking-tight">
+                  {typedText}
+                </span>
+
+                <motion.span
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                  className={`w-0.5 h-6 bg-emerald-500 ml-1 ${
+                    isTypingDone ? "opacity-50" : ""
+                  }`}
+                />
+              </div>
             </div>
           </div>
 
@@ -170,7 +177,6 @@ const Hero = () => {
               Get Started Free
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
-
           </motion.div>
 
           <motion.div

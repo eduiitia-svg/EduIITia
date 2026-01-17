@@ -71,8 +71,12 @@ const ForgotPasswordModal = ({ setShowForgot, setShowLogin }) => {
           <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center">
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-[#10b981] rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">E</span>
+                <div className="w-10 h-10 bg-[#10b981] rounded-lg flex items-center justify-center p-2">
+                  <img
+                    src="/logo.svg"
+                    alt="EduIITia Logo"
+                    className="w-full h-full rounded-md object-contain"
+                  />
                 </div>
                 <span className="text-gray-900 dark:text-white font-semibold text-xl">
                   EduIITia

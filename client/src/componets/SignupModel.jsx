@@ -36,10 +36,10 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
   const [verificationStep, setVerificationStep] = useState("code");
 
   const { loading, error, message, isAuthenticated } = useSelector(
-    (state) => state.auth
+    (state) => state.auth,
   );
   const { verifiedAdmin, verificationStatus } = useSelector(
-    (state) => state.admin
+    (state) => state.admin,
   );
 
   useEffect(() => {
@@ -59,13 +59,13 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
         verifyRegistrationCode({
           code: code,
           email: email,
-        })
+        }),
       ).unwrap();
 
       if (verifyResult.status === "approved") {
         setVerificationStep("approved");
         toast.success(
-          "Institute verified! Create your password to complete registration."
+          "Institute verified! Create your password to complete registration.",
         );
       } else if (verifyResult.status === "pending") {
         setVerificationStep("pending");
@@ -133,7 +133,7 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
 
       await dispatch(register(registerData)).unwrap();
       toast.success(
-        "Account created! You can now login and access demo tests."
+        "Account created! You can now login and access demo tests.",
       );
     } catch (error) {
       const errorMessage =
@@ -161,13 +161,13 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
         verifyRegistrationCode({
           code: codeToVerify,
           email: formData.email,
-        })
+        }),
       ).unwrap();
 
       if (verifyResult.status === "approved") {
         setVerificationStep("approved");
         toast.success(
-          "Institute verified! Create your password to complete registration."
+          "Institute verified! Create your password to complete registration.",
         );
       } else if (verifyResult.status === "pending") {
         setVerificationStep("pending");
@@ -178,18 +178,18 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
             code: codeToVerify,
             name: formData.name,
             email: formData.email,
-          })
+          }),
         ).unwrap();
 
         if (submitResult.status === "pending") {
           setVerificationStep("pending");
           toast.success(
-            "Registration request submitted! Check your email once approved."
+            "Registration request submitted! Check your email once approved.",
           );
         } else if (submitResult.status === "approved") {
           setVerificationStep("approved");
           toast.success(
-            "Institute verified! Create your password to complete registration."
+            "Institute verified! Create your password to complete registration.",
           );
         }
       }
@@ -260,8 +260,12 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
           <div className="p-8">
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 bg-[#10b981] rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">E</span>
+                <div className="w-9 h-9 bg-[#10b981] rounded-lg flex items-center justify-center p-1.5">
+                  <img
+                    src="/logo.svg"
+                    alt="EduIITia Logo"
+                    className="w-full h-full rounded-md object-contain"
+                  />
                 </div>
                 <span className="text-gray-900 dark:text-white font-semibold text-lg">
                   EduIITia

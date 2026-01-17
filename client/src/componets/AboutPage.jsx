@@ -42,22 +42,26 @@ const AboutPage = () => {
         </h2>
 
         <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed mb-5">
-          Welcome to{" "}
           <span className="font-semibold text-emerald-600 dark:text-emerald-400">
             EduIITia
           </span>{" "}
-          — your smart learning companion designed to help you excel across
-          <strong> all subjects and competitive exams</strong>. We bring
-          together interactive quizzes, concept-driven practice, and smart
-          assessments to make learning engaging, effective, and result-oriented.
+          is a smart, exam-focused mock testing platform built to make
+          high-quality online assessments accessible, powerful, and easy to use
+          for both <strong>educators and learners</strong>. Designed for today’s
+          digital examination landscape, EduIITia combines structured practice,
+          precision-based evaluation, and performance insights to help users
+          prepare smarter and perform better.
         </p>
 
         <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed mb-8">
-          Whether you're preparing for school exams, competitive tests, or
-          strengthening your fundamentals, EduIITia adapts to your learning
-          needs. With instant feedback, detailed analytics, and topic-wise
-          progress tracking, we help you study smarter, build confidence, and
-          stay ahead in every exam you prepare for.
+          Whether you are a teacher, coaching centre, institution, or a student,
+          EduIITia adapts to your needs. <strong>Educators</strong> can create
+          professional MCQ-based mock tests without any coding or technical
+          expertise, using an intuitive interface with time limits, automatic
+          evaluation, and detailed analytics, while <strong>students</strong>{" "}
+          experience a real exam-like environment with instant results, progress
+          tracking, and insights into accuracy, speed, and time management —
+          essential skills for modern online and competitive exams.
         </p>
 
         <Link
