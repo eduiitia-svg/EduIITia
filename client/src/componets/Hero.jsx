@@ -46,6 +46,13 @@ const Hero = () => {
     navigate("/study?category=school");
   };
 
+  const handleBecomePartner = () => {
+    const contactSection = document.getElementById("contact-us");
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const floatingCards = [
     { icon: BookOpen, position: "top-[15%] left-[10%]", delay: 0 },
     { icon: Brain, position: "top-[25%] right-[10%]", delay: 0.2 },
@@ -130,7 +137,7 @@ const Hero = () => {
             </span>
           </motion.div>
 
-          <div className="">
+          <div>
             <h1 className="text-5xl sm:text-7xl lg:text-8xl font-medium tracking-tighter text-gray-900 dark:text-white leading-[0.9]">
               Your ultimate
               <span className="block text-transparent bg-clip-text bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-600 dark:from-white dark:via-gray-200 dark:to-gray-500 pb-14 leading-20">
@@ -159,10 +166,15 @@ const Hero = () => {
             </div>
           </div>
 
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed font-light">
-            Master online exams with smart mock tests, instant insights, and
-            personalized improvement paths powered by AI.
-          </p>
+          <div className="max-w-2xl mx-auto ">
+            <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed font-light">
+              Master online exams with smart mock tests, instant insights, and
+              personalized improvement paths powered by AI. A unified online
+              platform where teachers create high-quality mock tests and
+              students practice in a real exam environment with instant
+              evaluation and smart performance analytics.
+            </p>
+          </div>
 
           <motion.div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4"
@@ -176,6 +188,24 @@ const Hero = () => {
             >
               Get Started Free
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </button>
+
+            <button
+              onClick={handleBecomePartner}
+              className="group relative h-12 px-8 rounded-full 
+             bg-gray-50/50 dark:bg-gray-900/50 
+             backdrop-blur-md 
+             border border-gray-200 dark:border-gray-700 
+             text-gray-900 dark:text-white 
+             font-medium text-sm 
+             transition-all duration-300 
+             hover:bg-gray-100/80 dark:hover:bg-gray-800/80 
+             hover:scale-[1.02] 
+             hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-black/30
+             flex items-center gap-2"
+            >
+              Become a Partner
+              <ArrowRight className="w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform group-hover:translate-x-1" />
             </button>
           </motion.div>
 
