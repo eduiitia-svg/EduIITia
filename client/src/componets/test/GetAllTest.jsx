@@ -12,7 +12,9 @@ import {
   ArrowRight,
   Sparkles,
   Loader2,
+  Lock, 
 } from "lucide-react";
+import toast from "react-hot-toast"; 
 
 const GetAllTest = () => {
   const navigate = useNavigate();
@@ -29,18 +31,9 @@ const GetAllTest = () => {
       gradientTheme: "from-blue-400 via-cyan-400 to-teal-400",
       iconColor: "text-blue-500",
       classes: [
-        "Class 1",
-        "Class 2",
-        "Class 3",
-        "Class 4",
-        "Class 5",
-        "Class 6",
-        "Class 7",
-        "Class 8",
-        "Class 9",
-        "Class 10",
-        "Class 11",
-        "Class 12",
+        "Class 1", "Class 2", "Class 3", "Class 4", "Class 5",
+        "Class 6", "Class 7", "Class 8", "Class 9", "Class 10",
+        "Class 11", "Class 12",
       ],
       route: "/study?category=school",
     },
@@ -52,33 +45,20 @@ const GetAllTest = () => {
       gradientTheme: "from-violet-400 via-fuchsia-400 to-pink-400",
       iconColor: "text-violet-500",
       exams: [
-        "Medical",
-        "Engineering",
-        "Law",
-        "Management",
-        "Architecture",
-        "Education",
-        "Science",
-        "Common",
-        "Agricultural",
+        "Medical", "Engineering", "Law", "Management", "Architecture",
+        "Education", "Science", "Common", "Agricultural",
       ],
       route: "/study?category=entrance",
     },
     {
       id: "recruitment",
       title: "Recruitment Exams",
-      description:
-        "Government job exams including SSC, Banking, Railway & more",
+      description: "Government job exams including SSC, Banking, Railway & more",
       icon: Briefcase,
       gradientTheme: "from-emerald-400 via-teal-400 to-cyan-400",
       iconColor: "text-emerald-500",
       exams: [
-        "SSC",
-        "Banking",
-        "Railway",
-        "UPSC",
-        "Teaching",
-        "General Preparation",
+        "SSC", "Banking", "Railway", "UPSC", "Teaching", "General Preparation",
       ],
       route: "/study?category=recruitment",
     },
@@ -106,7 +86,7 @@ const GetAllTest = () => {
       (error) => {
         console.error("Error fetching user data:", error);
         setCheckingSubscription(false);
-      },
+      }
     );
     return () => {
       unsubscribe();
@@ -128,7 +108,6 @@ const GetAllTest = () => {
       if (sub.mainCategory) {
         return sub.mainCategory.toLowerCase() === categoryId.toLowerCase();
       }
-
       return false;
     });
   };
@@ -150,7 +129,7 @@ const GetAllTest = () => {
 
       if (activeSubscriptions.length === 0) {
         toast.error(
-          "No active subscription found. Please subscribe to access this category.",
+          "No active subscription found. Please subscribe to access this category."
         );
         navigate("/pricing");
       } else {
@@ -161,7 +140,7 @@ const GetAllTest = () => {
 
         toast.error(
           `Access Denied! Your subscription only allows: ${allowedCategories}. Please upgrade to access ${categoryId}.`,
-          { duration: 4000 },
+          { duration: 4000 }
         );
       }
       return;
@@ -246,36 +225,13 @@ const GetAllTest = () => {
                   }
                 >
                   <div
-                    className={`relative h-full w-full z-10 flex flex-col p-px rounded-[36px] transition-all duration-500 ${
-                      isPro
-                        ? "hover:-translate-y-2 hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:shadow-black/50 cursor-pointer"
-                        : "cursor-not-allowed opacity-60"
-                    } bg-linear-to-b from-white/80 to-white/40 dark:from-zinc-800/80 dark:to-zinc-900/40`}
+                    className={`relative h-full w-full z-10 flex flex-col p-px rounded-[36px] transition-all duration-500 
+                      hover:-translate-y-2 hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:shadow-black/50 cursor-pointer
+                      bg-linear-to-b from-white/80 to-white/40 dark:from-zinc-800/80 dark:to-zinc-900/40`}
                   >
-                    {!isPro && (
-                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm rounded-[36px]">
-                        <div className="flex flex-col items-center gap-3 text-white">
-                          <svg
-                            className="w-12 h-12"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                            />
-                          </svg>
-                          <span className="text-sm font-bold">
-                            Subscription Required
-                          </span>
-                        </div>
-                      </div>
-                    )}
+
                     <div
-                      className={`absolute inset-0 h-full w-full bg-linear-to-br ${category.gradientTheme} opacity-0 group-hover:opacity-20 dark:group-hover:opacity-30 blur-3xl transition-all duration-700 ease-in-out rounded-[36px] bg-size-[200%_200%] bg-top-left  group-hover:bg-bottom-right`}
+                      className={`absolute inset-0 h-full w-full bg-linear-to-br ${category.gradientTheme} opacity-0 group-hover:opacity-20 dark:group-hover:opacity-30 blur-3xl transition-all duration-700 ease-in-out rounded-[36px] bg-size-[200%_200%] bg-top-left group-hover:bg-bottom-right`}
                     />
 
                     <div className="relative h-full flex flex-col p-8 rounded-[35px] bg-white/70 dark:bg-zinc-900/80 backdrop-blur-2xl overflow-hidden border border-white/20 dark:border-white/5 transition-colors duration-500 group-hover:bg-white/80 dark:group-hover:bg-zinc-900/90">
@@ -293,7 +249,7 @@ const GetAllTest = () => {
                           />
                         </div>
 
-                        {isPro && (
+                        {isPro ? (
                           <div className="flex items-center gap-1.5 bg-linear-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 backdrop-blur-md border border-amber-200/50 dark:border-amber-700/30 pl-2 pr-3 py-1.5 rounded-full shadow-sm">
                             <Sparkles
                               size={14}
@@ -304,6 +260,11 @@ const GetAllTest = () => {
                               Pro
                             </span>
                           </div>
+                        ) : (
+                           
+                           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-400">
+                              <Lock size={14} />
+                           </div>
                         )}
                       </div>
 
@@ -316,13 +277,17 @@ const GetAllTest = () => {
                         </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-2.5 mt-2  mb-10 relative z-10">
+                      <div className="flex flex-wrap gap-2.5 mt-2 mb-10 relative z-10">
                         {(category.classes || category.exams)
                           ?.slice(0, 3)
                           .map((item, i) => (
                             <span
                               key={i}
-                              className={`text-xs font-semibold px-3.5 py-2 rounded-lg bg-gray-100/80 dark:bg-zinc-800/80 text-gray-600 dark:text-gray-300 border border-gray-200/50 dark:border-white/5 transition-colors duration-300 group-hover:border-${category.iconColor.split("-")[1]}-200/50 dark:group-hover:border-${category.iconColor.split("-")[1]}-800/50 group-hover:bg-white dark:group-hover:bg-zinc-800`}
+                              className={`text-xs font-semibold px-3.5 py-2 rounded-lg bg-gray-100/80 dark:bg-zinc-800/80 text-gray-600 dark:text-gray-300 border border-gray-200/50 dark:border-white/5 transition-colors duration-300 group-hover:border-${
+                                category.iconColor.split("-")[1]
+                              }-200/50 dark:group-hover:border-${
+                                category.iconColor.split("-")[1]
+                              }-800/50 group-hover:bg-white dark:group-hover:bg-zinc-800`}
                             >
                               {item}
                             </span>
@@ -343,19 +308,36 @@ const GetAllTest = () => {
                         className="relative z-10 w-full group/btn"
                       >
                         <div
-                          className={`relative overflow-hidden rounded-xl p-px bg-linear-to-r ${category.gradientTheme} shadow-md transition-all duration-300 group-hover/btn:shadow-lg group-hover/btn:scale-[1.02]`}
+                          className={`relative overflow-hidden rounded-xl p-px shadow-md transition-all duration-300 group-hover/btn:shadow-lg group-hover/btn:scale-[1.02]
+                          ${isPro 
+                            ? `bg-linear-to-r ${category.gradientTheme}` 
+                            : "bg-gray-200 dark:bg-zinc-700" 
+                          }`}
                         >
-                          <div className="absolute inset-0 bg-white/20 dark:bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"></div>
+                          {isPro && <div className="absolute inset-0 bg-white/20 dark:bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"></div>}
 
                           <div
-                            className={`relative flex h-full w-full items-center justify-center rounded-[11px] bg-linear-to-r ${category.gradientTheme} px-4 py-3.5 text-[15px] font-bold text-white transition-all duration-300`}
+                            className={`relative flex h-full w-full items-center justify-center rounded-[11px] px-4 py-3.5 text-[15px] font-bold transition-all duration-300
+                            ${isPro 
+                              ? `bg-linear-to-r ${category.gradientTheme} text-white` 
+                              : "bg-gray-50 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 group-hover/btn:text-gray-800 dark:group-hover/btn:text-white" // Clean grey background for locked
+                            }`}
                           >
                             <span className="flex items-center gap-3">
-                              Explore Now
-                              <ArrowRight
-                                size={18}
-                                className="transition-transform duration-300 group-hover/btn:translate-x-1"
-                              />
+                              {isPro ? (
+                                <>
+                                  Explore Now
+                                  <ArrowRight
+                                    size={18}
+                                    className="transition-transform duration-300 group-hover/btn:translate-x-1"
+                                  />
+                                </>
+                              ) : (
+                                <>
+                                  <Lock size={16} className="text-gray-400 group-hover/btn:text-inherit transition-colors" />
+                                  Unlock Access
+                                </>
+                              )}
                             </span>
                           </div>
                         </div>
