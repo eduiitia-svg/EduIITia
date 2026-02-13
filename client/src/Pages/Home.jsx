@@ -13,6 +13,9 @@ const Home = () => {
       <div id="hero">
         <Hero />
       </div>
+      <div id="pricing">
+        <Pricing />
+      </div>
       <div id="test">
         <GetAllTest/>
       </div>
@@ -21,9 +24,6 @@ const Home = () => {
       </div>
       <div id="about">
         <AboutPage />
-      </div>
-      <div id="pricing">
-        <Pricing />
       </div>
       <div id="contact-us">
         <ContactPage />
