@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useDashboard } from "../../context/DashboardContext";
+import FeatureGate from "../FeatureGate"; 
 import PerformanceOverview from "./PerformanceOverview";
 import TestAnalytics from "./TestAnalytics";
 import ProgressChart from "./ProgressChart";
-
 import Sidebar from "./Sidebar";
 import TestHistory from "./TestHistory";
 import Leaderboard from "./LeaderBoard";
@@ -12,20 +12,45 @@ import Leaderboard from "./LeaderBoard";
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("history");
   const { dashboardData, loading, error, refreshData } = useDashboard();
+
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
-        return <PerformanceOverview data={dashboardData?.performance} />;
+        return (
+          <FeatureGate featureName="Performance Overview" variant="full">
+            <PerformanceOverview data={dashboardData?.performance} />
+          </FeatureGate>
+        );
       case "analytics":
-        return <TestAnalytics data={dashboardData?.attempts} />;
+        return (
+          <FeatureGate featureName="Test Analytics" variant="full">
+            <TestAnalytics data={dashboardData?.attempts} />
+          </FeatureGate>
+        );
       case "progress":
-        return <ProgressChart data={dashboardData?.progress} />;
+        return (
+          <FeatureGate featureName="Progress Tracking" variant="full">
+            <ProgressChart data={dashboardData?.progress} />
+          </FeatureGate>
+        );
       case "history":
-        return <TestHistory />;
+        return (
+          <FeatureGate featureName="Test History" variant="full">
+            <TestHistory />
+          </FeatureGate>
+        );
       case "leaderboard":
-        return <Leaderboard />;
+        return (
+          <FeatureGate featureName="Leaderboard Access" variant="full">
+            <Leaderboard />
+          </FeatureGate>
+        );
       default:
-        return <PerformanceOverview data={dashboardData?.performance} />;
+        return (
+          <FeatureGate featureName="Performance Overview" variant="full">
+            <PerformanceOverview data={dashboardData?.performance} />
+          </FeatureGate>
+        );
     }
   };
 
@@ -33,7 +58,6 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px]" />
-
         <div className="text-center relative z-10">
           <div className="relative mx-auto mb-4 w-12 h-12">
             <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-cyan-500 animate-spin" />
@@ -49,6 +73,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-gray-900 dark:text-slate-200 flex relative overflow-x-hidden selection:bg-cyan-500/30">
+      {/* Background effects */}
       <div className="fixed top-[-10%] right-[-5%] w-[600px] h-[600px] bg-cyan-200/20 dark:bg-cyan-900/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed bottom-[-10%] left-[20%] w-[500px] h-[500px] bg-emerald-200/20 dark:bg-emerald-900/10 rounded-full blur-[120px] pointer-events-none" />
 

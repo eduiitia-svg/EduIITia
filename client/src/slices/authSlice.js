@@ -86,7 +86,7 @@ export const register = createAsyncThunk(
       createdBy = null,
       registrationCode = null,
     },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const validRoles = ["student", "admin", "superadmin"];
@@ -97,7 +97,7 @@ export const register = createAsyncThunk(
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
       const user = userCredential.user;
 
@@ -148,7 +148,7 @@ export const register = createAsyncThunk(
 
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 export const login = createAsyncThunk(
@@ -158,7 +158,7 @@ export const login = createAsyncThunk(
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
 
       const user = userCredential.user;
@@ -176,8 +176,11 @@ export const login = createAsyncThunk(
         uid: user.uid,
         ...userData,
       };
-
-      localStorage.setItem("user", JSON.stringify(completeUser));
+      const loginData = {
+        user: completeUser,
+        loginTimestamp: Date.now(),
+      };
+      localStorage.setItem("user", JSON.stringify(loginData));
 
       return {
         user: completeUser,
@@ -191,7 +194,7 @@ export const login = createAsyncThunk(
 
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 export const forgotPassword = createAsyncThunk(
@@ -215,7 +218,7 @@ export const forgotPassword = createAsyncThunk(
     } catch (err) {
       return rejectWithValue("Something went wrong");
     }
-  }
+  },
 );
 
 export const resetPassword = createAsyncThunk(
@@ -232,7 +235,7 @@ export const resetPassword = createAsyncThunk(
 
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 export const updateProfile = createAsyncThunk(
@@ -251,7 +254,7 @@ export const updateProfile = createAsyncThunk(
         formData.append("file", avatar);
         formData.append(
           "upload_preset",
-          import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+          import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
         );
         formData.append("folder", `user_avatars/${userId}`);
 
@@ -262,7 +265,7 @@ export const updateProfile = createAsyncThunk(
           {
             method: "POST",
             body: formData,
-          }
+          },
         );
 
         if (!response.ok) {
@@ -282,7 +285,7 @@ export const updateProfile = createAsyncThunk(
         formData.append("file", coverImage);
         formData.append(
           "upload_preset",
-          import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+          import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
         );
         formData.append("folder", `user_covers/${userId}`);
 
@@ -293,7 +296,7 @@ export const updateProfile = createAsyncThunk(
           {
             method: "POST",
             body: formData,
-          }
+          },
         );
 
         if (!response.ok) {
@@ -323,7 +326,7 @@ export const updateProfile = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.message || "Failed to update profile");
     }
-  }
+  },
 );
 
 export const logout = createAsyncThunk(
@@ -345,7 +348,7 @@ export const logout = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const fetchCurrentUser = createAsyncThunk(
   "auth/fetchCurrentUser",
@@ -362,7 +365,7 @@ export const fetchCurrentUser = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.message);
     }
-  }
+  },
 );
 
 export const getAllUsers = createAsyncThunk(
@@ -426,7 +429,7 @@ export const getAllUsers = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.message);
     }
-  }
+  },
 );
 
 export const getUserById = createAsyncThunk(
@@ -455,7 +458,7 @@ export const getUserById = createAsyncThunk(
       let planDetails = null;
       if (data.subscription?.planId) {
         const planDoc = await getDoc(
-          doc(db, "subscriptionPlans", data.subscription.planId)
+          doc(db, "subscriptionPlans", data.subscription.planId),
         );
         if (planDoc.exists()) planDetails = planDoc.data();
       }
@@ -471,7 +474,7 @@ export const getUserById = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.message);
     }
-  }
+  },
 );
 
 export const deleteUser = createAsyncThunk(
@@ -507,7 +510,7 @@ export const deleteUser = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.message);
     }
-  }
+  },
 );
 const authSlice = createSlice({
   name: "auth",
@@ -567,6 +570,11 @@ const authSlice = createSlice({
         s.user = a.payload.user;
         s.isAuthenticated = true;
         s.message = a.payload.message;
+        const loginData = {
+          user: a.payload.user,
+          loginTimestamp: Date.now(),
+        };
+        localStorage.setItem("user", JSON.stringify(loginData));
       })
       .addCase(login.rejected, (s, a) => {
         s.loading = false;

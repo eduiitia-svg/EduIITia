@@ -1,4 +1,3 @@
-
 import { createContext, useState, useContext, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
@@ -23,7 +22,6 @@ export const SubscriptionProvider = ({ children }) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  
   const getSubscriptionStatus = async () => {
     try {
       if (!user?.uid) return;
@@ -34,36 +32,50 @@ export const SubscriptionProvider = ({ children }) => {
       if (!userSnap.exists()) return;
 
       const userData = userSnap.data();
-      const subscription = userData.subscription || {};
+      const subscriptions = userData.subscription || [];
 
-      
-      let planDetails = null;
-      if (subscription.planId) {
-        const planRef = doc(db, "subscriptionPlans", subscription.planId);
-        const planSnap = await getDoc(planRef);
-        if (planSnap.exists()) {
-          planDetails = planSnap.data();
+      let activeSubscription = null;
+      for (const sub of subscriptions) {
+        if (sub.isActive && sub.endDate) {
+          const endDate = sub.endDate.toDate
+            ? sub.endDate.toDate()
+            : new Date(sub.endDate);
+          if (new Date() < endDate) {
+            activeSubscription = sub;
+            break;
+          }
         }
       }
 
-      
-      const isActive =
-        subscription.status === "active" &&
-        subscription.endDate &&
-        new Date(subscription.endDate.toDate()) > new Date();
+      if (!activeSubscription) {
+        setSubscriptionStatus({
+          isActive: false,
+          planType: "free",
+          plan: null,
+        });
+        return;
+      }
+
+      let planDetails = null;
+      if (activeSubscription.plan) {
+        const planRef = doc(db, "subscriptionPlans", activeSubscription.plan);
+        const planSnap = await getDoc(planRef);
+        if (planSnap.exists()) {
+          planDetails = { id: planSnap.id, ...planSnap.data() };
+        }
+      }
 
       setSubscriptionStatus({
-        ...subscription,
-        plan: planDetails,
-        isActive,
+        ...activeSubscription,
+        isActive: true,
         planType: planDetails?.type || "free",
+        planDetails: planDetails,
       });
     } catch (error) {
       console.error("Error fetching subscription status:", error);
     }
   };
 
-  
   const getPlans = async () => {
     try {
       await dispatch(getAllPlans()).unwrap();
@@ -72,7 +84,6 @@ export const SubscriptionProvider = ({ children }) => {
     }
   };
 
-  
   const startCheckout = async (planId) => {
     try {
       setIsProcessing(true);
@@ -81,7 +92,6 @@ export const SubscriptionProvider = ({ children }) => {
         throw new Error("User not authenticated");
       }
 
-      
       const planRef = doc(db, "subscriptionPlans", planId);
       const planSnap = await getDoc(planRef);
 
@@ -91,11 +101,9 @@ export const SubscriptionProvider = ({ children }) => {
 
       const plan = planSnap.data();
 
-      
-      
       const orderData = {
         orderId: `order_${Date.now()}`,
-        amount: plan.price * 100, 
+        amount: plan.price * 100,
         currency: "INR",
         planId,
         planName: plan.name,
@@ -111,17 +119,12 @@ export const SubscriptionProvider = ({ children }) => {
     }
   };
 
-  
   const verifyPayment = async (payload) => {
     try {
       setIsProcessing(true);
 
-      
-      
-
       const { orderId, paymentId, signature, planId } = payload;
 
-      
       const orderData = {
         userId: user.uid,
         planId,
@@ -133,10 +136,8 @@ export const SubscriptionProvider = ({ children }) => {
         createdAt: new Date(),
       };
 
-      
       await addDoc(collection(db, "orders"), orderData);
 
-      
       const userRef = doc(db, "users", user.uid);
       const planRef = doc(db, "subscriptionPlans", planId);
       const planSnap = await getDoc(planRef);
@@ -168,15 +169,11 @@ export const SubscriptionProvider = ({ children }) => {
     }
   };
 
-  
   const canAccessTest = (test) => {
-    
     if (test.isDemo || test.testType?.toLowerCase() === "demo") return true;
 
-    
     if (!subscriptionStatus) return false;
 
-    
     const hasActivePaidSubscription =
       subscriptionStatus.isActive &&
       subscriptionStatus.planType?.toLowerCase() !== "free";
@@ -184,7 +181,125 @@ export const SubscriptionProvider = ({ children }) => {
     return hasActivePaidSubscription;
   };
 
-  
+  const canTakeTest = async () => {
+    try {
+      if (!user?.uid) return false;
+
+      if (!subscriptionStatus || !subscriptionStatus.isActive) {
+        return false;
+      }
+
+      const planId = subscriptionStatus.plan;
+      if (!planId) {
+        console.error("No plan ID found in subscription");
+        return false;
+      }
+
+      const planRef = doc(db, "subscriptionPlans", planId);
+      const planSnap = await getDoc(planRef);
+
+      if (!planSnap.exists()) {
+        console.error("Plan not found:", planId);
+        return false;
+      }
+
+      const planData = planSnap.data();
+      const testLimit = planData.testLimit || 0;
+
+      if (testLimit === 0 || testLimit === -1) {
+        return true;
+      }
+
+      const subscriptionStartDate = subscriptionStatus.startDate;
+      const startDate = subscriptionStartDate?.toDate
+        ? subscriptionStartDate.toDate()
+        : new Date(subscriptionStartDate);
+
+      const attemptsRef = collection(db, "testAttempts");
+      const q = query(
+        attemptsRef,
+        where("userId", "==", user.uid),
+        where("submittedAt", "!=", null),
+        where("submittedAt", ">=", startDate),
+      );
+      const attemptsSnap = await getDocs(q);
+      const completedTests = attemptsSnap.size;
+
+      console.log(
+        `Test usage for current subscription: ${completedTests}/${testLimit}`,
+      );
+
+      return completedTests < testLimit;
+    } catch (error) {
+      console.error("Error checking test limit:", error);
+      return false;
+    }
+  };
+
+  const getRemainingTests = async () => {
+    try {
+      if (!user?.uid) return 0;
+
+      if (!subscriptionStatus || !subscriptionStatus.isActive) {
+        return 0;
+      }
+
+      const planId = subscriptionStatus.plan;
+      if (!planId) return 0;
+
+      const planRef = doc(db, "subscriptionPlans", planId);
+      const planSnap = await getDoc(planRef);
+
+      if (!planSnap.exists()) return 0;
+
+      const planData = planSnap.data();
+      const testLimit = planData.testLimit || 0;
+
+      
+      if (testLimit === 0 || testLimit === -1) {
+        return 999;
+      }
+
+    
+      const subscriptionStartDate = subscriptionStatus.startDate;
+      const startDate = subscriptionStartDate?.toDate
+        ? subscriptionStartDate.toDate()
+        : new Date(subscriptionStartDate);
+
+      const attemptsRef = collection(db, "testAttempts");
+      const q = query(
+        attemptsRef,
+        where("userId", "==", user.uid),
+        where("submittedAt", "!=", null),
+        where("submittedAt", ">=", startDate), 
+      );
+      const attemptsSnap = await getDocs(q);
+      const completedTests = attemptsSnap.size;
+
+      return Math.max(0, testLimit - completedTests);
+    } catch (error) {
+      console.error("Error getting remaining tests:", error);
+      return 0;
+    }
+  };
+
+  const hasFeatureAccess = (featureName) => {
+    if (!subscriptionStatus || !subscriptionStatus.isActive) {
+      return false;
+    }
+
+    const features = subscriptionStatus.planDetails?.features || [];
+
+    return features.includes(featureName);
+  };
+
+  const getAccessibleFeatures = () => {
+    if (!subscriptionStatus || !subscriptionStatus.isActive) {
+      return [];
+    }
+    return subscriptionStatus.planDetails?.features || [];
+  };
+
   useEffect(() => {
     getPlans();
   }, []);
@@ -205,6 +320,10 @@ export const SubscriptionProvider = ({ children }) => {
     startCheckout,
     verifyPayment,
     canAccessTest,
+    canTakeTest,
+    getRemainingTests,
+    hasFeatureAccess,
+    getAccessibleFeatures,
     refreshSubscription: getSubscriptionStatus,
   };
 

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { login, clearError, clearMessage } from "../slices/authSlice";
+import { getTeacherSubscriptionStatus } from "../slices/subscriptionSlice";
 import { X } from "lucide-react";
+import { useNavigate } from "react-router"; 
 
 const LoginModal = ({
   setShowLogin,
@@ -11,20 +13,63 @@ const LoginModal = ({
   onClose,
 }) => {
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
 
   const dispatch = useDispatch();
-  const { loading, error, message, isAuthenticated } = useSelector(
+  const { loading, error, message, isAuthenticated, user } = useSelector( 
     (state) => state.auth,
   );
 
   useEffect(() => {
-    if (isAuthenticated) {
-      toast.success("Login successful!");
-      onClose();
-      setShowLogin(false);
-      setShowSignup(false);
+    if (isAuthenticated && user) { 
+      const checkTeacherSubscription = async () => {
+        if (user.role === "admin") {
+          
+          try {
+            const subscriptionStatus = await dispatch(
+              getTeacherSubscriptionStatus(user.uid)
+            ).unwrap();
+
+            if (!subscriptionStatus.hasSubscription || !subscriptionStatus.isActive) {
+              
+              toast.success("Login successful! Please choose a subscription plan.");
+              onClose();
+              setShowLogin(false);
+              setShowSignup(false);
+              
+              setTimeout(() => {
+                navigate("/teacher-pricing");
+              }, 1000);
+            } else {
+             
+              toast.success("Login successful!");
+              onClose();
+              setShowLogin(false);
+              setShowSignup(false);
+            }
+          } catch (error) {
+            console.error("Error checking teacher subscription:", error);
+       
+            toast.success("Login successful! Please verify your subscription.");
+            onClose();
+            setShowLogin(false);
+            setShowSignup(false);
+            
+            setTimeout(() => {
+              navigate("/teacher-pricing");
+            }, 1000);
+          }
+        } else {
+          toast.success("Login successful!");
+          onClose();
+          setShowLogin(false);
+          setShowSignup(false);
+        }
+      };
+
+      checkTeacherSubscription();
     }
-  }, [isAuthenticated, onClose, setShowLogin, setShowSignup]);
+  }, [isAuthenticated, user, onClose, setShowLogin, setShowSignup, dispatch, navigate]);
 
   useEffect(() => {
     if (error) {

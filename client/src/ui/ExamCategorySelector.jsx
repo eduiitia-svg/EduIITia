@@ -42,17 +42,14 @@ const ExamCategorySelector = ({ onCategorySelect, filterByCategory }) => {
     const normalizedFilter = filterByCategory.toLowerCase();
 
     return categories.filter((category) => {
-      const normalizedCategoryName = category.name.toLowerCase();
-      return (
-        normalizedCategoryName.includes(normalizedFilter) ||
-        normalizedFilter.includes(normalizedCategoryName) ||
-        (normalizedFilter === "school" &&
-          category.type?.toLowerCase() === "school") ||
-        (normalizedFilter === "entrance" &&
-          category.type?.toLowerCase() === "competitive") ||
-        (normalizedFilter === "recruitment" &&
-          category.type?.toLowerCase() === "competitive")
-      );
+      const normalizedMainCategory = category.mainCategory?.toLowerCase();
+
+      if (normalizedMainCategory === normalizedFilter) return true;
+
+      const normalizedCategoryType = category.type?.toLowerCase();
+      if (normalizedCategoryType === normalizedFilter) return true;
+
+      return false;
     });
   }, [categories, filterByCategory]);
 
@@ -113,7 +110,7 @@ const ExamCategorySelector = ({ onCategorySelect, filterByCategory }) => {
         {filteredCategories.map((category) => {
           const isExpanded = expandedCategories[category.id];
           const normalizedSubjects = category.subjects.map((subj) =>
-            typeof subj === "string" ? { name: subj, subcategories: [] } : subj
+            typeof subj === "string" ? { name: subj, subcategories: [] } : subj,
           );
           const Icon = getIconComponent(category.icon);
 
@@ -215,7 +212,7 @@ const ExamCategorySelector = ({ onCategorySelect, filterByCategory }) => {
                                         handleSubcategoryClick(
                                           category,
                                           subject,
-                                          subcategory
+                                          subcategory,
                                         )
                                       }
                                       className="w-full px-3 py-1.5 rounded-lg text-left hover:bg-teal-100 dark:hover:bg-teal-500/20 text-gray-600 dark:text-gray-400 hover:text-teal-700 dark:hover:text-teal-400 text-xs transition-all flex items-center gap-2"

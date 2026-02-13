@@ -23,6 +23,11 @@ import Papa from "papaparse";
 import { setLoading } from "../../slices/questionSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCategories } from "../../slices/categorySlice";
+import {
+  checkTeacherTestCreationAccess,
+  incrementMockTestCount,
+} from "../../slices/subscriptionSlice";
+import toast from "react-hot-toast";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
@@ -31,6 +36,7 @@ const UploadCSV = () => {
   const dispatch = useDispatch();
   const { categories } = useSelector((state) => state.category);
   const { user } = useSelector((state) => state.auth);
+  const { teacherSubscription } = useSelector((state) => state.subscription);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -198,19 +204,23 @@ const UploadCSV = () => {
                 correct?.toUpperCase() === "A"
                   ? row.optionA
                   : correct?.toUpperCase() === "B"
-                  ? row.optionB
-                  : correct?.toUpperCase() === "C"
-                  ? row.optionC
-                  : correct?.toUpperCase() === "D"
-                  ? row.optionD
-                  : correct,
+                    ? row.optionB
+                    : correct?.toUpperCase() === "C"
+                      ? row.optionC
+                      : correct?.toUpperCase() === "D"
+                        ? row.optionD
+                        : correct,
               explanation: row.explanation || row.Explanation || null,
             };
           });
 
           const validQuestions = questions.filter(
             (q) =>
-              q.questionText && q.optionA && q.optionB && q.optionC && q.optionD
+              q.questionText &&
+              q.optionA &&
+              q.optionB &&
+              q.optionC &&
+              q.optionD,
           );
 
           resolve(validQuestions);
@@ -385,7 +395,7 @@ const UploadCSV = () => {
 
       if (allQuestions.length === 0) {
         throw new Error(
-          "No questions found in the document. Please check if the document contains properly formatted multiple-choice questions."
+          "No questions found in the document. Please check if the document contains properly formatted multiple-choice questions.",
         );
       }
       return allQuestions;
@@ -423,6 +433,37 @@ const UploadCSV = () => {
         text: "Please fill in all required fields including category and subject",
       });
       return;
+    }
+    if (user.role === "admin") {
+      try {
+        const selectedCat = categories.find(
+          (cat) => cat.id === selectedCategoryId,
+        );
+
+         const checkResult = await dispatch(
+      checkTeacherTestCreationAccess({
+        userId: user.uid,
+        testDetails: {
+          mainCategory: selectedCat?.mainCategory, 
+          examType: selectedCat?.type,
+          subject: selectedSubject,
+          classLevel: selectedCat?.name || null, 
+          subcategory: selectedSubcategory || null,
+        },
+      }),
+    ).unwrap();
+
+        if (!checkResult.canCreate) {
+          toast.error(checkResult.reason);
+          setMessage({ type: "error", text: checkResult.reason });
+          return;
+        }
+      } catch (error) {
+        console.error("Subscription check error:", error);
+        toast.error("Failed to verify subscription: " + error);
+        setMessage({ type: "error", text: "Failed to verify subscription" });
+        return;
+      }
     }
 
     setAiProcessing(true);
@@ -471,6 +512,7 @@ const UploadCSV = () => {
 
       setParsedQuestions(questions);
       setShowPreview(true);
+
       setMessage({
         type: "success",
         text: `🎉 Successfully extracted ${questions.length} questions! Review and confirm.`,
@@ -526,6 +568,38 @@ const UploadCSV = () => {
       return;
     }
 
+    if (user.role === "admin") {
+      try {
+        const selectedCat = categories.find(
+          (cat) => cat.id === selectedCategoryId,
+        );
+
+       const checkResult = await dispatch(
+      checkTeacherTestCreationAccess({
+        userId: user.uid,
+        testDetails: {
+          mainCategory: selectedCat?.mainCategory, 
+          examType: selectedCat?.type,
+          subject: selectedSubject,
+          classLevel: selectedCat?.name || null,
+          subcategory: selectedSubcategory || null,
+        },
+      }),
+    ).unwrap();
+
+        if (!checkResult.canCreate) {
+          toast.error(checkResult.reason);
+          setMessage({ type: "error", text: checkResult.reason });
+          return;
+        }
+      } catch (error) {
+        console.error("Subscription check error:", error);
+        toast.error("Failed to verify subscription: " + error);
+        setMessage({ type: "error", text: "Failed to verify subscription" });
+        return;
+      }
+    }
+
     dispatch(setLoading(true));
     try {
       const submitData = new FormData();
@@ -538,7 +612,7 @@ const UploadCSV = () => {
 
       submitData.append("categoryId", selectedCategoryId);
       const selectedCat = categories.find(
-        (cat) => cat.id === selectedCategoryId
+        (cat) => cat.id === selectedCategoryId,
       );
       submitData.append("categoryName", selectedCat?.name || "");
       submitData.append("subject", selectedSubject);
@@ -548,11 +622,21 @@ const UploadCSV = () => {
       }
 
       await uploadCSV(submitData);
-
       await fetchQuestionPapers();
 
-      setMessage({ type: "success", text: "Questions uploaded successfully!" });
+      if (user.role === "admin") {
+        try {
+          await dispatch(incrementMockTestCount(user.uid)).unwrap();
+          toast.success("Questions uploaded successfully!");
+        } catch (incrementError) {
+          console.error("Failed to increment test count:", incrementError);
+          toast.warning("Test uploaded but count update failed");
+        }
+      } else {
+        toast.success("Questions uploaded successfully!");
+      }
 
+      setMessage({ type: "success", text: "Questions uploaded successfully!" });
       resetForm();
     } catch (error) {
       setMessage({
@@ -561,6 +645,9 @@ const UploadCSV = () => {
           "Error uploading questions: " +
           (error.response?.data?.message || error.message),
       });
+      toast.error(
+        "Upload failed: " + (error.response?.data?.message || error.message),
+      );
     } finally {
       dispatch(setLoading(false));
     }
@@ -578,7 +665,7 @@ const UploadCSV = () => {
     dispatch(setLoading(true));
     try {
       const selectedCat = categories.find(
-        (cat) => cat.id === selectedCategoryId
+        (cat) => cat.id === selectedCategoryId,
       );
 
       const submitData = {
@@ -600,8 +687,23 @@ const UploadCSV = () => {
       }
 
       await uploadCSV(submitData);
-
       await fetchQuestionPapers();
+
+      if (user.role === "admin") {
+        try {
+          await dispatch(incrementMockTestCount(user.uid)).unwrap();
+          toast.success(
+            `AI-parsed questions uploaded successfully! ${parsedQuestions.length} questions added.`,
+          );
+        } catch (incrementError) {
+          console.error("Failed to increment test count:", incrementError);
+          toast.warning("Test uploaded but count update failed");
+        }
+      } else {
+        toast.success(
+          `AI-parsed questions uploaded successfully! ${parsedQuestions.length} questions added.`,
+        );
+      }
 
       setMessage({
         type: "success",
@@ -616,6 +718,9 @@ const UploadCSV = () => {
           "Error uploading questions: " +
           (error.response?.data?.message || error.message),
       });
+      toast.error(
+        "Upload failed: " + (error.response?.data?.message || error.message),
+      );
     } finally {
       dispatch(setLoading(false));
     }
@@ -637,7 +742,7 @@ const UploadCSV = () => {
   };
 
   const selectedCategory = categories.find(
-    (cat) => cat.id === selectedCategoryId
+    (cat) => cat.id === selectedCategoryId,
   );
 
   const selectedSubjectObj = selectedCategory?.subjects.find((subj) => {
@@ -716,8 +821,8 @@ const UploadCSV = () => {
                   message.type === "error"
                     ? "bg-red-100 dark:bg-red-500/10 border-red-300 dark:border-red-500/20 text-red-700 dark:text-red-400"
                     : message.type === "info"
-                    ? "bg-blue-100 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
-                    : "bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                      ? "bg-blue-100 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/20 text-blue-700 dark:text-blue-400"
+                      : "bg-emerald-100 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
                 }`}
               >
                 {message.type === "error" ? (
@@ -913,8 +1018,8 @@ const UploadCSV = () => {
                   {!selectedSubject
                     ? "Select a subject first"
                     : availableSubcategories.length === 0
-                    ? "No subcategories available"
-                    : "Select Subcategory (Optional)"}
+                      ? "No subcategories available"
+                      : "Select Subcategory (Optional)"}
                 </option>
                 {availableSubcategories.map((subcat) => (
                   <option
@@ -922,7 +1027,7 @@ const UploadCSV = () => {
                     value={subcat}
                     className="bg-white dark:bg-gray-900"
                   >
-                    <ChevronRight className="inline" size={12} /> {subcat}
+                    {subcat}
                   </option>
                 ))}
               </select>
@@ -954,10 +1059,10 @@ const UploadCSV = () => {
                     ? "border-purple-500 bg-purple-500/10"
                     : "border-emerald-500 bg-emerald-500/10"
                   : file
-                  ? uploadMode === "ai"
-                    ? "border-purple-500/50 bg-purple-100 dark:bg-purple-900/10"
-                    : "border-emerald-500/50 bg-emerald-100 dark:bg-emerald-900/10"
-                  : "border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/20 hover:border-gray-400 dark:hover:border-white/20 hover:bg-gray-100 dark:hover:bg-black/40"
+                    ? uploadMode === "ai"
+                      ? "border-purple-500/50 bg-purple-100 dark:bg-purple-900/10"
+                      : "border-emerald-500/50 bg-emerald-100 dark:bg-emerald-900/10"
+                    : "border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/20 hover:border-gray-400 dark:hover:border-white/20 hover:bg-gray-100 dark:hover:bg-black/40"
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}

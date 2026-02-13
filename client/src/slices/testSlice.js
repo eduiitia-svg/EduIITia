@@ -29,28 +29,104 @@ const calculateAccuracy = (questions) => {
   return `${Math.round(accuracy)}%`;
 };
 
+export const getSubjectsByCategory = createAsyncThunk(
+  "test/getSubjectsByCategory",
+  async ({ categoryName }, { rejectWithValue }) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      const allowedCreatorIds = await getAllowedCreatorIds(userId);
+      const questionsRef = collection(db, "questions");
+      let constraints = [];
+
+      if (categoryName) {
+        constraints.push(where("categoryName", "==", categoryName));
+      }
+
+      if (allowedCreatorIds !== null && allowedCreatorIds.length > 0) {
+        constraints.push(where("createdBy", "in", allowedCreatorIds));
+      }
+
+      const q =
+        constraints.length > 0
+          ? query(questionsRef, ...constraints)
+          : query(questionsRef);
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        return [];
+      }
+
+      const subjectMap = new Map();
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const subject = data.subject;
+        if (subject) {
+          if (!subjectMap.has(subject)) {
+            subjectMap.set(subject, {
+              subject: subject,
+              testCount: 0,
+              subcategories: new Set(),
+            });
+          }
+          const subjectData = subjectMap.get(subject);
+          subjectData.testCount++;
+          if (data.subcategory) {
+            subjectData.subcategories.add(data.subcategory);
+          }
+        }
+      });
+
+      const subjects = Array.from(subjectMap.values()).map((item) => ({
+        subject: item.subject,
+        testCount: item.testCount,
+        subcategories: Array.from(item.subcategories),
+      }));
+
+      return subjects;
+    } catch (error) {
+      console.error("Error in getSubjectsByCategory:", error);
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
 const getAllowedCreatorIds = async (userId) => {
   try {
     const userDoc = await getDoc(doc(db, "users", userId));
-    if (!userDoc.exists()) return [];
+    if (!userDoc.exists()) {
+      console.log("User document not found");
+      return [];
+    }
 
     const userData = userDoc.data();
     const userRole = userData.role;
 
+    console.log("User role:", userRole);
+
     if (userRole === "superadmin") {
+      console.log("Superadmin access - no creator filter");
       return null;
     }
 
     if (userRole === "admin") {
+      console.log("Admin access - only own tests:", [userId]);
       return [userId];
     }
+
     if (userRole === "student") {
       if (userData.createdBy) {
+        console.log("Student access - creator tests:", [userData.createdBy]);
         return [userData.createdBy];
       }
+      console.log("Student with no creator - see all tests");
       return null;
     }
 
+    console.log("Unknown role - no access");
     return [];
   } catch (error) {
     console.error("Error getting allowed creator IDs:", error);
@@ -69,56 +145,235 @@ export const getAllTestsByCategory = createAsyncThunk(
 
       const allowedCreatorIds = await getAllowedCreatorIds(userId);
 
+      // 🔍 Step 1: Fetch all categories and build mappings
+      const categoriesRef = collection(db, "categories");
+      const categoriesSnapshot = await getDocs(categoriesRef);
+      const categoriesMapByName = new Map();
+      const categoriesMapById = new Map();
+
+      categoriesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        categoriesMapByName.set(data.name, { id: doc.id, ...data });
+        categoriesMapById.set(doc.id, { id: doc.id, ...data });
+      });
+
+      console.log(
+        "📚 All categories loaded:",
+        Array.from(categoriesMapByName.keys()),
+      );
+
       const questionsRef = collection(db, "questions");
       let constraints = [];
+      let categoryNamesToQuery = [];
 
-      const normalizedCategory = categoryName
-        ? categoryName.charAt(0).toUpperCase() +
-          categoryName.slice(1).toLowerCase()
-        : null;
+      // 🔍 Step 2: Determine which category names to query
+      if (categoryName) {
+        const isMainCategoryFilter = [
+          "school",
+          "entrance",
+          "recruitment",
+        ].includes(categoryName.toLowerCase());
 
-      if (subcategory) {
-        constraints.push(where("categoryName", "==", normalizedCategory));
+        if (isMainCategoryFilter) {
+          categoryNamesToQuery = Array.from(categoriesMapById.values())
+            .filter(
+              (cat) =>
+                cat.mainCategory?.toLowerCase() === categoryName.toLowerCase(),
+            )
+            .map((cat) => cat.name);
+
+          console.log(
+            `🎯 Filtering by mainCategory "${categoryName}":`,
+            categoryNamesToQuery,
+          );
+        } else {
+          categoryNamesToQuery = [categoryName];
+          console.log(`🎯 Direct category match:`, categoryName);
+        }
+      }
+
+      // 🔍 Step 3: Build query constraints
+      if (subject && !categoryName) {
+        constraints.push(where("subject", "==", subject));
+      } else if (subcategory && subject && categoryNamesToQuery.length > 0) {
+        if (categoryNamesToQuery.length === 1) {
+          constraints.push(
+            where("categoryName", "==", categoryNamesToQuery[0]),
+          );
+        } else {
+          constraints.push(
+            where("categoryName", "in", categoryNamesToQuery.slice(0, 10)),
+          );
+        }
         constraints.push(where("subject", "==", subject));
         constraints.push(where("subcategory", "==", subcategory));
-      } else if (subject) {
-        constraints.push(where("categoryName", "==", normalizedCategory));
+      } else if (subject && categoryNamesToQuery.length > 0) {
+        if (categoryNamesToQuery.length === 1) {
+          constraints.push(
+            where("categoryName", "==", categoryNamesToQuery[0]),
+          );
+        } else {
+          constraints.push(
+            where("categoryName", "in", categoryNamesToQuery.slice(0, 10)),
+          );
+        }
         constraints.push(where("subject", "==", subject));
-      } else if (normalizedCategory) {
-        constraints.push(where("categoryName", "==", normalizedCategory));
+      } else if (categoryNamesToQuery.length > 0) {
+        if (categoryNamesToQuery.length === 1) {
+          constraints.push(
+            where("categoryName", "==", categoryNamesToQuery[0]),
+          );
+        } else if (categoryNamesToQuery.length <= 10) {
+          constraints.push(where("categoryName", "in", categoryNamesToQuery));
+        } else {
+          console.warn(
+            `⚠️ More than 10 matching categories (${categoryNamesToQuery.length}), will filter in memory`,
+          );
+        }
       }
 
       if (allowedCreatorIds !== null && allowedCreatorIds.length > 0) {
         constraints.push(where("createdBy", "in", allowedCreatorIds));
       }
 
-      const q = query(questionsRef, ...constraints);
+      // 🔍 Step 4: Execute query
+      const q =
+        constraints.length > 0
+          ? query(questionsRef, ...constraints)
+          : query(questionsRef);
+
       const querySnapshot = await getDocs(q);
 
+      console.log("🔍 Query filters:", { categoryName, subject, subcategory });
+      console.log("📊 Raw documents found:", querySnapshot.size);
 
       if (querySnapshot.empty) {
+        console.log("❌ No tests found for filters");
         return [];
       }
 
+      // 🔍 Step 5: Process tests and add category metadata
       const tests = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+
+        if (
+          categoryNamesToQuery.length > 10 &&
+          !categoryNamesToQuery.includes(data.categoryName)
+        ) {
+          return;
+        }
+
+        // ✅ Use categoryId first, fall back to categoryName
+        const categoryInfo = data.categoryId
+          ? categoriesMapById.get(data.categoryId)
+          : categoriesMapByName.get(data.categoryName);
+
         tests.push({
           id: doc.id,
           ...data,
           totalQuestions: data.questions?.length || 0,
           isDemo:
             data.testType?.toLowerCase() === "demo" || data.isDemo || false,
+          categoryMainCategory: categoryInfo?.mainCategory,
+          categoryType: categoryInfo?.type,
+          categoryId: categoryInfo?.id,
         });
       });
 
+      console.log("✅ Tests retrieved:", tests.length);
+      console.log(
+        "📝 Sample test data:",
+        tests[0]
+          ? {
+              testName: tests[0].testName,
+              categoryName: tests[0].categoryName,
+              categoryId: tests[0].categoryId,
+              categoryMainCategory: tests[0].categoryMainCategory,
+              subject: tests[0].subject,
+            }
+          : "No tests",
+      );
+
       return tests;
     } catch (error) {
+      console.error("❌ Error in getAllTestsByCategory:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
+// export const getAllTestsByCategory = createAsyncThunk(
+//   "test/getAllTestsByCategory",
+//   async ({ categoryName, subject, subcategory }, { rejectWithValue }) => {
+//     try {
+//       const userId = auth.currentUser?.uid;
+//       if (!userId) {
+//         throw new Error("User not authenticated");
+//       }
+
+//       const allowedCreatorIds = await getAllowedCreatorIds(userId);
+
+//       const questionsRef = collection(db, "questions");
+//       let constraints = [];
+
+//       if (subcategory) {
+//         constraints.push(where("categoryName", "==", categoryName));
+//         constraints.push(where("subject", "==", subject));
+//         constraints.push(where("subcategory", "==", subcategory));
+//       } else if (subject) {
+//         constraints.push(where("categoryName", "==", categoryName));
+//         constraints.push(where("subject", "==", subject));
+//       } else if (categoryName) {
+//         constraints.push(where("categoryName", "==", categoryName));
+//       }
+
+//       if (allowedCreatorIds !== null && allowedCreatorIds.length > 0) {
+//         constraints.push(where("createdBy", "in", allowedCreatorIds));
+//       }
+
+//       const q =
+//         constraints.length > 0
+//           ? query(questionsRef, ...constraints)
+//           : query(questionsRef);
+
+//       const querySnapshot = await getDocs(q);
+
+//       console.log(
+//         "Query constraints:",
+//         constraints.map((c) => c._a?.field?.segments || "unknown"),
+//       );
+//       console.log("Documents found:", querySnapshot.size);
+
+//       if (querySnapshot.empty) {
+//         console.log("No tests found for filters:", {
+//           categoryName,
+//           subject,
+//           subcategory,
+//         });
+//         return [];
+//       }
+
+//       const tests = [];
+//       querySnapshot.forEach((doc) => {
+//         const data = doc.data();
+//         tests.push({
+//           id: doc.id,
+//           ...data,
+//           totalQuestions: data.questions?.length || 0,
+//           isDemo:
+//             data.testType?.toLowerCase() === "demo" || data.isDemo || false,
+//         });
+//       });
+
+//       console.log("Tests retrieved:", tests.length);
+//       return tests;
+//     } catch (error) {
+//       console.error("Error in getAllTestsByCategory:", error);
+//       return rejectWithValue(error.message);
+//     }
+//   },
+// );
 export const getAllTests = createAsyncThunk(
   "test/getAllTests",
   async (_, { rejectWithValue }) => {
@@ -161,7 +416,7 @@ export const getAllTests = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const checkTestAccess = createAsyncThunk(
@@ -245,7 +500,7 @@ export const checkTestAccess = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const startTest = createAsyncThunk(
@@ -255,15 +510,59 @@ export const startTest = createAsyncThunk(
       const userId = auth.currentUser?.uid;
       if (!userId) throw new Error("User not authenticated");
 
-      const testDoc = await getDoc(doc(db, "questions", testId));
-      if (!testDoc.exists()) throw new Error("Test not found");
-
-      const test = testDoc.data();
-
       const userDoc = await getDoc(doc(db, "users", userId));
       if (!userDoc.exists()) throw new Error("User not found");
-
       const userData = userDoc.data();
+
+      const testDoc = await getDoc(doc(db, "questions", testId));
+      if (!testDoc.exists()) throw new Error("Test not found");
+      const test = testDoc.data();
+
+      const isDemo = test.testType?.toLowerCase() === "demo" || test.isDemo;
+
+      if (!isDemo) {
+        const subscriptions = userData.subscription || [];
+        const activeSubscription = subscriptions.find((sub) => {
+          if (!sub.isActive || !sub.endDate) return false;
+          const endDate = sub.endDate.toDate
+            ? sub.endDate.toDate()
+            : new Date(sub.endDate);
+          return new Date() < endDate;
+        });
+
+        if (!activeSubscription) {
+          throw new Error("Active subscription required to access this test");
+        }
+
+        const subscriptionStartDate = activeSubscription.startDate?.toDate
+          ? activeSubscription.startDate.toDate()
+          : new Date(activeSubscription.startDate);
+
+        const planRef = doc(db, "subscriptionPlans", activeSubscription.plan);
+        const planSnap = await getDoc(planRef);
+
+        if (planSnap.exists()) {
+          const planData = planSnap.data();
+          const testLimit = planData.testLimit || 0;
+
+          if (testLimit > 0) {
+            const attemptsRef = collection(db, "testAttempts");
+            const q = query(
+              attemptsRef,
+              where("userId", "==", userId),
+              where("submittedAt", "!=", null),
+              where("submittedAt", ">=", subscriptionStartDate),
+            );
+            const attemptsSnap = await getDocs(q);
+
+            if (attemptsSnap.size >= testLimit) {
+              throw new Error(
+                `Test limit reached. You have completed ${attemptsSnap.size} out of ${testLimit} tests in your current subscription period.`,
+              );
+            }
+          }
+        }
+      }
 
       if (userData.role === "student" && userData.createdBy) {
         if (test.createdBy !== userData.createdBy) {
@@ -303,7 +602,7 @@ export const startTest = createAsyncThunk(
 
       const attemptRef = await addDoc(
         collection(db, "testAttempts"),
-        attemptData
+        attemptData,
       );
 
       return {
@@ -318,7 +617,7 @@ export const startTest = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const getQuestionByIndex = createAsyncThunk(
@@ -349,14 +648,14 @@ export const getQuestionByIndex = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const answerQuestion = createAsyncThunk(
   "test/answerQuestion",
   async (
     { attemptId, questionIndex, selectedAnswer, status },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const attemptRef = doc(db, "testAttempts", attemptId);
@@ -386,7 +685,7 @@ export const answerQuestion = createAsyncThunk(
 
       let answers = attempt.answers || [];
       const existingIndex = answers.findIndex(
-        (a) => a.questionIndex === questionIndex
+        (a) => a.questionIndex === questionIndex,
       );
 
       const answerData = {
@@ -416,7 +715,7 @@ export const answerQuestion = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const submitTest = createAsyncThunk(
@@ -431,7 +730,7 @@ export const submitTest = createAsyncThunk(
         attemptsRef,
         where("userId", "==", userId),
         where("testId", "==", testId),
-        where("submittedAt", "==", null)
+        where("submittedAt", "==", null),
       );
       const querySnapshot = await getDocs(q);
 
@@ -502,7 +801,7 @@ export const submitTest = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const getUserTestHistory = createAsyncThunk(
@@ -516,7 +815,7 @@ export const getUserTestHistory = createAsyncThunk(
       const q = query(
         attemptsRef,
         where("userId", "==", userId),
-        orderBy("submittedAt", "desc")
+        orderBy("submittedAt", "desc"),
       );
 
       const querySnapshot = await getDocs(q);
@@ -571,7 +870,7 @@ export const getUserTestHistory = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const getUserSummary = createAsyncThunk(
@@ -585,7 +884,7 @@ export const getUserSummary = createAsyncThunk(
       const q = query(
         attemptsRef,
         where("userId", "==", userId),
-        where("submittedAt", "!=", null)
+        where("submittedAt", "!=", null),
       );
 
       const querySnapshot = await getDocs(q);
@@ -616,7 +915,7 @@ export const getUserSummary = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 const testSlice = createSlice({
@@ -646,6 +945,8 @@ const testSlice = createSlice({
 
     loading: false,
     error: null,
+    subjects: [],
+    subjectsLoading: false,
   },
   reducers: {
     setCurrentQuestionIndex: (state, action) => {
@@ -786,6 +1087,19 @@ const testSlice = createSlice({
         state.allTestsLoading = false;
         state.error = action.payload;
         state.tests = [];
+      })
+      .addCase(getSubjectsByCategory.pending, (state) => {
+        state.subjectsLoading = true;
+        state.error = null;
+      })
+      .addCase(getSubjectsByCategory.fulfilled, (state, action) => {
+        state.subjectsLoading = false;
+        state.subjects = action.payload;
+      })
+      .addCase(getSubjectsByCategory.rejected, (state, action) => {
+        state.subjectsLoading = false;
+        state.error = action.payload;
+        state.subjects = [];
       });
   },
 });

@@ -1,11 +1,14 @@
 import { useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./config/firebase";
-import { setUser } from "./slices/authSlice";
-import { getSubscriptionStatus } from "./slices/subscriptionSlice";
+import { logout, setUser } from "./slices/authSlice";
+import {
+  getSubscriptionStatus,
+  getTeacherSubscriptionStatus,
+} from "./slices/subscriptionSlice";
 import ProtectedRoute from "./layout/ProtectedRoute";
 import SpotlightBackground from "./ui/SpotlightBackground";
 import SubscriptionMonitor from "./layout/SubscriptionMonitor";
@@ -20,6 +23,7 @@ const ResetPasswordPage = lazy(() => import("./componets/ResetPasswordPage"));
 const SuperApp = lazy(() => import("./super-admin/SuperApp"));
 const AdminDashboard = lazy(() => import("./componets/admin/AdminDashboard"));
 const LegalPages = lazy(() => import("./componets/LegalPages"));
+const TeacherPricing = lazy(() => import("./componets/TeacherPricing"));
 
 import { TestProvider } from "./context/TestContext.jsx";
 import { DashboardProvider } from "./context/DashboardContext.jsx";
@@ -55,13 +59,15 @@ const StudentRoutes = () => (
 );
 
 const AdminRoutes = () => (
-  <AdminProvider>
-    <ThemeProvider>
-    <Routes>
-      <Route path="/*" element={<AdminDashboard />} />
-    </Routes>
-    </ThemeProvider>
-  </AdminProvider>
+  <SubscriptionProvider>
+    <AdminProvider>
+      <ThemeProvider>
+        <Routes>
+          <Route path="/*" element={<AdminDashboard />} />
+        </Routes>
+      </ThemeProvider>
+    </AdminProvider>
+  </SubscriptionProvider>
 );
 
 const SuperAdminRoutes = () => (
@@ -74,58 +80,119 @@ const App = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const storedUser = localStorage.getItem("user");
+ useEffect(() => {
+  const SESSION_DURATION = 24 * 60 * 60 * 1000; 
 
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          const currentUserId = auth.currentUser?.uid;
+  const isSessionValid = () => {
+    try {
+      const storedData = localStorage.getItem("user");
+      if (!storedData) return false;
 
-          if (currentUserId && currentUserId !== parsedUser.uid) {
-            localStorage.clear();
-            window.location.reload();
-            return;
-          }
-
-          dispatch(setUser(parsedUser));
-
-          if (parsedUser?.uid) {
-            const userRef = doc(db, "users", parsedUser.uid);
-            const userSnap = await getDoc(userRef);
-
-            if (userSnap.exists()) {
-              const freshUserData = userSnap.data();
-              const updatedUser = {
-                uid: parsedUser.uid,
-                ...freshUserData,
-              };
-
-              dispatch(setUser(updatedUser));
-              localStorage.setItem("user", JSON.stringify(updatedUser));
-
-              if (freshUserData.subscription) {
-                dispatch(getSubscriptionStatus(parsedUser.uid));
-              }
-            } else {
-              localStorage.clear();
-            }
-          }
-        } catch (error) {
-          console.error("Error initializing auth:", error);
-          localStorage.removeItem("user");
-        }
+      const parsedData = JSON.parse(storedData);
+      
+      if (!parsedData.loginTimestamp) {
+        const loginData = {
+          ...parsedData,
+          loginTimestamp: Date.now(),
+        };
+        localStorage.setItem("user", JSON.stringify(loginData));
+        return true;
       }
-    };
 
-    initializeAuth();
-  }, [dispatch]);
+      const now = Date.now();
+      const sessionAge = now - parsedData.loginTimestamp;
+
+      return sessionAge < SESSION_DURATION;
+    } catch (error) {
+      console.error("Error checking session:", error);
+      return false;
+    }
+  };
+
+  const initializeAuth = async () => {
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      try {
+        if (!isSessionValid()) {
+          localStorage.clear();
+          dispatch(logout());
+          toast.error("Your session has expired. Please login again.");
+          return;
+        }
+
+        const parsedUser = JSON.parse(storedUser);
+        const userData = parsedUser.user || parsedUser; 
+        
+        const currentUserId = auth.currentUser?.uid;
+
+        if (currentUserId && currentUserId !== userData.uid) {
+          localStorage.clear();
+          window.location.reload();
+          return;
+        }
+
+        dispatch(setUser(userData));
+
+        if (userData?.uid) {
+          const userRef = doc(db, "users", userData.uid);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists()) {
+            const freshUserData = userSnap.data();
+            const updatedUser = {
+              uid: userData.uid,
+              ...freshUserData,
+            };
+
+            dispatch(setUser(updatedUser));
+            
+            const existingData = JSON.parse(storedUser);
+            const loginData = {
+              user: updatedUser,
+              loginTimestamp: existingData.loginTimestamp || Date.now(),
+            };
+            localStorage.setItem("user", JSON.stringify(loginData));
+
+            if (
+              freshUserData.role === "student" &&
+              freshUserData.subscription
+            ) {
+              dispatch(getSubscriptionStatus(userData.uid));
+            } else if (freshUserData.role === "admin") {
+              dispatch(getTeacherSubscriptionStatus(userData.uid));
+            }
+          } else {
+            localStorage.clear();
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+        localStorage.removeItem("user");
+      }
+    }
+  };
+
+  initializeAuth();
+
+  const intervalId = setInterval(() => {
+    if (!isSessionValid()) {
+      localStorage.clear();
+      dispatch(logout());
+      toast.error("Your session has expired. Please login again.", {
+        duration: 4000,
+      });
+      window.location.href = "/";
+    }
+  }, 30 * 1000);
+
+  return () => clearInterval(intervalId);
+}, [dispatch]);
+
   return (
     <div className="relative min-h-screen w-full text-gray-900 dark:text-gray-200">
-      <Toaster position="top-center" />
+      <Toaster position="bottom-right" />
       <SpotlightBackground />
-
       <SubscriptionMonitor />
 
       <div className="relative z-10">
@@ -140,7 +207,6 @@ const App = () => {
 
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
-              {/* Super Admin */}
               <Route
                 path="/super/*"
                 element={
@@ -150,7 +216,15 @@ const App = () => {
                 }
               />
 
-              {/* Admin */}
+              <Route
+                path="/teacher-pricing"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <TeacherPricing />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route
                 path="/admin/*"
                 element={
@@ -160,7 +234,6 @@ const App = () => {
                 }
               />
 
-              {/* Student */}
               <Route
                 path="/*"
                 element={
@@ -170,31 +243,36 @@ const App = () => {
                 }
               />
 
-              {/* Legal Pages (PUBLIC) */}
               <Route path="/legal-terms/:type?" element={<LegalPages />} />
 
-              {/* Home */}
               <Route
                 path="/"
                 element={
                   user?.role === "superadmin" ? (
                     <Navigate to="/super/dashboard" replace />
                   ) : user?.role === "admin" ? (
-                    <Navigate to="/admin/dashboard" replace />
+                    user?.hasActiveTeacherSubscription ? (
+                      <Navigate to="/admin/dashboard" replace />
+                    ) : (
+                      <Navigate to="/teacher-pricing" replace />
+                    )
                   ) : (
                     <Home />
                   )
                 }
               />
 
-              {/* Catch-all */}
               <Route
                 path="*"
                 element={
                   user?.role === "superadmin" ? (
                     <Navigate to="/super/dashboard" replace />
                   ) : user?.role === "admin" ? (
-                    <Navigate to="/admin/dashboard" replace />
+                    user?.hasActiveTeacherSubscription ? (
+                      <Navigate to="/admin/dashboard" replace />
+                    ) : (
+                      <Navigate to="/teacher-pricing" replace />
+                    )
                   ) : (
                     <Navigate to="/" replace />
                   )

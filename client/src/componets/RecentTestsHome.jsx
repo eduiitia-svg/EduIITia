@@ -8,30 +8,39 @@ import { getAllTestsByCategory, startTest } from "../slices/testSlice";
 import InstructionModal from "./test/InstructionModal";
 import ExamCategorySelector from "../ui/ExamCategorySelector";
 import AppLayout from "../layout/AppLayout";
+import { useSubscription } from "../context/SubscriptionContext";
+import { getAllCategories } from "../slices/categorySlice";
 
 const RecentTestsHome = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
+  const { canTakeTest, getRemainingTests } = useSubscription();
   const { user } = useSelector((state) => state.auth);
   const { tests, allTestsLoading } = useSelector((state) => state.test);
+  const { categories } = useSelector((state) => state.category);
 
   const [selectedTest, setSelectedTest] = useState(null);
   const [showInstructions, setShowInstructions] = useState(false);
   const [starting, setStarting] = useState(null);
 
-  // Get category from URL params
   const categoryFromUrl = searchParams.get("category");
 
   useEffect(() => {
-    // Load tests based on category from URL
-    if (categoryFromUrl) {
+    dispatch(getAllCategories());
+  }, [dispatch]);
+
+  useEffect(() => {
+    const subjectFromUrl = searchParams.get("subject");
+
+    if (subjectFromUrl) {
+      dispatch(getAllTestsByCategory({ subject: subjectFromUrl }));
+    } else if (categoryFromUrl) {
       dispatch(getAllTestsByCategory({ categoryName: categoryFromUrl }));
     } else {
       dispatch(getAllTestsByCategory({}));
     }
-  }, [dispatch, categoryFromUrl]);
-
+  }, [dispatch, categoryFromUrl, searchParams]);
   const handleCategorySelect = (category, subject, subcategory) => {
     const filters = {
       categoryName: category.name,
@@ -46,34 +55,79 @@ const RecentTestsHome = () => {
   };
 
   const checkAccess = (test) => {
-    if (test.isDemo || test.testType?.toLowerCase() === "demo") return true;
-    if (!user) return false;
-    if (user.subscription && user.subscription.length > 0) {
-      return user.subscription.some((sub) => {
-        if (!sub.isActive) return false;
-        if (sub.endDate) {
-          const endDate = sub.endDate.toDate
-            ? sub.endDate.toDate()
-            : new Date(sub.endDate);
-          return new Date() < endDate;
-        }
-        return sub.isActive;
-      });
-    }
-    return false;
-  };
+  if (test.isDemo || test.testType?.toLowerCase() === "demo") {
+    return true;
+  }
 
-  const handleStartClick = (test) => {
+  if (!user) {
+    return false;
+  }
+
+  const subscriptions = user.subscription || [];
+
+  return subscriptions.some((sub) => {
+    if (!sub.isActive || !sub.endDate) return false;
+
+    const endDate = sub.endDate.toDate
+      ? sub.endDate.toDate()
+      : new Date(sub.endDate);
+
+    if (new Date() >= endDate) return false;
+
+    if (
+      sub.mainCategory &&
+      sub.mainCategory !== "All" &&
+      test.categoryMainCategory
+    ) {
+      if (
+        test.categoryMainCategory.toLowerCase() !==
+        sub.mainCategory.toLowerCase()
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      sub.subject &&
+      sub.subject !== "All" &&
+      test.subject
+    ) {
+      if (
+        test.subject.toLowerCase() !== sub.subject.toLowerCase()
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      sub.subcategory &&
+      sub.subcategory !== "All" &&
+      test.subcategory
+    ) {
+      if (
+        test.subcategory.toLowerCase() !== sub.subcategory.toLowerCase()
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+};
+
+  const handleStartClick = async (test) => {
     if (!user) {
       toast.error("Please log in to start the test.");
       navigate("/login");
       return;
     }
+
     if (!checkAccess(test)) {
       toast.error("Upgrade to PRO or Premium to access this test!");
       navigate("/pricing");
       return;
     }
+
     setSelectedTest(test);
     setShowInstructions(true);
   };
@@ -81,16 +135,18 @@ const RecentTestsHome = () => {
   const handleConfirmInstructions = async () => {
     if (!selectedTest) return;
     try {
-      setStarting(selectedTest.testType);
+      setStarting(selectedTest.id);
       const result = await dispatch(startTest(selectedTest.id)).unwrap();
-      if (result?.testId) {
-        navigate(`/test/${result.testId}`);
+      if (result?.attemptId) {
+        navigate(`/test/${result.attemptId}`);
       } else {
         toast.error("Failed to initialize test.");
       }
     } catch (error) {
-      toast.error("Failed to start test.");
-    } finally {
+      console.error("Start test error:", error);
+      toast.error(
+        error || "Failed to start test. Please check your subscription.",
+      );
       setShowInstructions(false);
       setStarting(null);
     }
@@ -109,6 +165,12 @@ const RecentTestsHome = () => {
   };
 
   const getCategoryTitle = () => {
+    const subjectFromUrl = searchParams.get("subject");
+
+    if (subjectFromUrl) {
+      return `${subjectFromUrl} Tests`;
+    }
+
     switch (categoryFromUrl?.toLowerCase()) {
       case "school":
         return "School Tests";
@@ -117,11 +179,17 @@ const RecentTestsHome = () => {
       case "recruitment":
         return "Recruitment Exam Tests";
       default:
-        return "Next-Gen Chemistry Testing";
+        return "Available Tests";
     }
   };
 
   const getCategoryDescription = () => {
+    const subjectFromUrl = searchParams.get("subject");
+
+    if (subjectFromUrl) {
+      return `Practice tests and quizzes for ${subjectFromUrl}`;
+    }
+
     switch (categoryFromUrl?.toLowerCase()) {
       case "school":
         return "Comprehensive test series for Classes 1-12 covering all subjects";
@@ -136,12 +204,85 @@ const RecentTestsHome = () => {
 
   const recentTests = tests || [];
 
+  const filteredTests = useMemo(() => {
+
+    if (!user?.subscription) {
+      return recentTests;
+    }
+
+    const activeSubscription = (user.subscription || []).find((sub) => {
+      if (!sub.isActive || !sub.endDate) return false;
+      const endDate = sub.endDate.toDate
+        ? sub.endDate.toDate()
+        : new Date(sub.endDate);
+      return new Date() < endDate;
+    });
+
+
+    if (!activeSubscription) {
+      return recentTests;
+    }
+
+    const filtered = recentTests.filter((test) => {
+      console.log(test)
+
+      if (test.isDemo || test.testType?.toLowerCase() === "demo") {
+       
+        return true;
+      }
+
+      if (
+        activeSubscription.mainCategory &&
+        activeSubscription.mainCategory !== "All" &&
+        test.categoryMainCategory
+      ) {
+        if (
+          test.categoryMainCategory.toLowerCase() !==
+          activeSubscription.mainCategory.toLowerCase()
+        ) {
+         
+          return false;
+        }
+      }
+
+      if (
+        activeSubscription.subject &&
+        activeSubscription.subject !== "All" &&
+        test.subject
+      ) {
+        if (
+          test.subject.toLowerCase() !==
+          activeSubscription.subject.toLowerCase()
+        ) {
+          return false;
+        }
+      }
+
+      if (
+        activeSubscription.subcategory &&
+        activeSubscription.subcategory !== "All" &&
+        test.subcategory
+      ) {
+        if (
+          test.subcategory.toLowerCase() !==
+          activeSubscription.subcategory.toLowerCase()
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+
+    return filtered;
+  }, [tests, recentTests, user]);
+
   return (
     <AppLayout>
       <div className="relative w-full min-h-screen overflow-hidden bg-white dark:bg-transparent">
         <div className="relative z-10 w-full max-w-7xl mx-auto py-12 px-6">
           <div className="text-center max-w-4xl mx-auto mb-16 space-y-4">
-
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5 mb-4">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-wide uppercase">
@@ -167,19 +308,19 @@ const RecentTestsHome = () => {
             </p>
 
             {/* Category Badge */}
-            {categoryFromUrl && (
+            {(categoryFromUrl || searchParams.get("subject")) && (
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/10 backdrop-blur-md">
                 <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-                  📚 {categoryFromUrl}
+                  📚 {searchParams.get("subject") || categoryFromUrl}
                 </span>
               </div>
             )}
           </div>
 
           <div className="mb-12">
-            <ExamCategorySelector 
+            <ExamCategorySelector
               onCategorySelect={handleCategorySelect}
-              filterByCategory={categoryFromUrl} 
+              filterByCategory={categoryFromUrl}
             />
           </div>
 
@@ -191,10 +332,10 @@ const RecentTestsHome = () => {
                   size={28}
                 />
                 Available Tests
-                {recentTests.length > 0 && (
+                {filteredTests.length > 0 && (
                   <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                    ({recentTests.length}{" "}
-                    {recentTests.length === 1 ? "test" : "tests"})
+                    ({filteredTests.length}{" "}
+                    {filteredTests.length === 1 ? "test" : "tests"})
                   </span>
                 )}
               </h2>
@@ -228,7 +369,7 @@ const RecentTestsHome = () => {
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recentTests.map((test, i) => {
+                {filteredTests.map((test, i) => {
                   const locked = !checkAccess(test);
                   const isDemo =
                     test.isDemo || test.testType?.toLowerCase() === "demo";
@@ -255,7 +396,7 @@ const RecentTestsHome = () => {
                         <div className="flex flex-wrap items-start gap-2 mb-4">
                           <span
                             className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${getTypeColor(
-                              test.testType
+                              test.testType,
                             )}`}
                           >
                             {test.testType}
@@ -316,8 +457,8 @@ const RecentTestsHome = () => {
                           locked
                             ? "bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 cursor-not-allowed"
                             : isStarting
-                            ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 cursor-wait"
-                            : "bg-linear-to-r from-emerald-500 dark:from-emerald-400 to-teal-600 text-white dark:text-black shadow-[0_0_20px_rgba(52,211,153,0.2)] hover:shadow-[0_0_25px_rgba(52,211,153,0.4)] hover:scale-[1.02]"
+                              ? "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 cursor-wait"
+                              : "bg-linear-to-r from-emerald-500 dark:from-emerald-400 to-teal-600 text-white dark:text-black shadow-[0_0_20px_rgba(52,211,153,0.2)] hover:shadow-[0_0_25px_rgba(52,211,153,0.4)] hover:scale-[1.02]"
                         }`}
                       >
                         {isStarting ? (

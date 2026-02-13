@@ -29,9 +29,18 @@ const GetAllTest = () => {
       gradientTheme: "from-blue-400 via-cyan-400 to-teal-400",
       iconColor: "text-blue-500",
       classes: [
-        "Class 1", "Class 2", "Class 3", "Class 4", "Class 5",
-        "Class 6", "Class 7", "Class 8", "Class 9", "Class 10",
-        "Class 11", "Class 12",
+        "Class 1",
+        "Class 2",
+        "Class 3",
+        "Class 4",
+        "Class 5",
+        "Class 6",
+        "Class 7",
+        "Class 8",
+        "Class 9",
+        "Class 10",
+        "Class 11",
+        "Class 12",
       ],
       route: "/study?category=school",
     },
@@ -43,8 +52,14 @@ const GetAllTest = () => {
       gradientTheme: "from-violet-400 via-fuchsia-400 to-pink-400",
       iconColor: "text-violet-500",
       exams: [
-        "Medical", "Engineering", "Law", "Management", "Architecture",
-        "Education", "Science", "Common",
+        "Medical",
+        "Engineering",
+        "Law",
+        "Management",
+        "Architecture",
+        "Education",
+        "Science",
+        "Common",
         "Agricultural",
       ],
       route: "/study?category=entrance",
@@ -58,7 +73,12 @@ const GetAllTest = () => {
       gradientTheme: "from-emerald-400 via-teal-400 to-cyan-400",
       iconColor: "text-emerald-500",
       exams: [
-        "SSC", "Banking", "Railway", "UPSC", "Teaching", "General Preparation",
+        "SSC",
+        "Banking",
+        "Railway",
+        "UPSC",
+        "Teaching",
+        "General Preparation",
       ],
       route: "/study?category=recruitment",
     },
@@ -86,14 +106,14 @@ const GetAllTest = () => {
       (error) => {
         console.error("Error fetching user data:", error);
         setCheckingSubscription(false);
-      }
+      },
     );
     return () => {
       unsubscribe();
     };
   }, [user?.uid]);
 
-  const hasPremiumAccess = () => {
+  const hasCategoryAccess = (categoryId) => {
     const userData = realtimeUserData || user;
     if (
       !userData ||
@@ -102,10 +122,51 @@ const GetAllTest = () => {
     ) {
       return false;
     }
-    return userData.subscription.some((sub) => isSubscriptionActive(sub));
+
+    return userData.subscription.some((sub) => {
+      if (!isSubscriptionActive(sub)) return false;
+      if (sub.mainCategory) {
+        return sub.mainCategory.toLowerCase() === categoryId.toLowerCase();
+      }
+
+      return false;
+    });
   };
 
-  const handleCategoryClick = (route) => {
+  const handleCategoryClick = (route, categoryId) => {
+    if (!user) {
+      toast.error("Please login to access tests");
+      navigate("/login");
+      return;
+    }
+
+    const hasAccess = hasCategoryAccess(categoryId);
+
+    if (!hasAccess) {
+      const userData = realtimeUserData || user;
+      const activeSubscriptions =
+        userData?.subscription?.filter((sub) => isSubscriptionActive(sub)) ||
+        [];
+
+      if (activeSubscriptions.length === 0) {
+        toast.error(
+          "No active subscription found. Please subscribe to access this category.",
+        );
+        navigate("/pricing");
+      } else {
+        const allowedCategories = activeSubscriptions
+          .map((sub) => sub.mainCategory)
+          .filter(Boolean)
+          .join(", ");
+
+        toast.error(
+          `Access Denied! Your subscription only allows: ${allowedCategories}. Please upgrade to access ${categoryId}.`,
+          { duration: 4000 },
+        );
+      }
+      return;
+    }
+
     navigate(route);
   };
 
@@ -113,7 +174,7 @@ const GetAllTest = () => {
     <div className="relative w-full overflow-hidden bg-gray-50/50 dark:bg-black/20 transition-colors duration-500">
       <div className="relative z-10 w-full max-w-7xl mx-auto py-16 px-6">
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-6">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 backdrop-blur-md shadow-sm"
@@ -126,30 +187,31 @@ const GetAllTest = () => {
               Library Live
             </span>
           </motion.div>
-          
+
           <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
             Next-Gen Mock{" "}
             <span className="relative whitespace-nowrap text-transparent bg-clip-text bg-linear-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-300 dark:to-cyan-400">
               Testing
             </span>
           </h1>
-          
+
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed font-medium">
             Experience decentralized learning. Start with free demo tests or
             unlock the full potential with our PRO network.
           </p>
-
           {user && (
             <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-white/60 dark:bg-zinc-900/50 backdrop-blur-md shadow-sm text-sm font-medium transition-all hover:border-gray-300 dark:hover:border-white/20">
-               <div
+              <div
                 className={`w-2 h-2 rounded-full ${
-                  hasPremiumAccess()
+                  user.subscription?.some((sub) => isSubscriptionActive(sub))
                     ? "bg-linear-to-r from-emerald-400 to-teal-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
                     : "bg-gray-400 dark:bg-gray-600"
                 }`}
               ></div>
               <span className="text-gray-800 dark:text-gray-200">
-                {hasPremiumAccess() ? "PRO Status Active" : "Free Tier Account"}
+                {user.subscription?.some((sub) => isSubscriptionActive(sub))
+                  ? "PRO Status Active"
+                  : "Free Tier Account"}
               </span>
             </div>
           )}
@@ -166,33 +228,78 @@ const GetAllTest = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {categories.map((category, index) => {
               const Icon = category.icon;
-              const isPro = hasPremiumAccess();
+              const isPro = hasCategoryAccess(category.id);
 
               return (
                 <motion.div
                   key={category.id}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.15, duration: 0.5, ease: "easeOut" }}
+                  transition={{
+                    delay: index * 0.15,
+                    duration: 0.5,
+                    ease: "easeOut",
+                  }}
                   className="group relative h-full"
-                  onClick={() => handleCategoryClick(category.route)}
+                  onClick={() =>
+                    handleCategoryClick(category.route, category.id)
+                  }
                 >
-                  <div className="relative h-full w-full z-10 flex flex-col p-px rounded-[36px] transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:shadow-black/50 cursor-pointer bg-linear-to-b from-white/80 to-white/40 dark:from-zinc-800/80 dark:to-zinc-900/40">
-                    
-                    <div className={`absolute inset-0 h-full w-full bg-linear-to-br ${category.gradientTheme} opacity-0 group-hover:opacity-20 dark:group-hover:opacity-30 blur-3xl transition-all duration-700 ease-in-out rounded-[36px] bg-size-[200%_200%] bg-top-left  group-hover:bg-bottom-right`} />
+                  <div
+                    className={`relative h-full w-full z-10 flex flex-col p-px rounded-[36px] transition-all duration-500 ${
+                      isPro
+                        ? "hover:-translate-y-2 hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:shadow-black/50 cursor-pointer"
+                        : "cursor-not-allowed opacity-60"
+                    } bg-linear-to-b from-white/80 to-white/40 dark:from-zinc-800/80 dark:to-zinc-900/40`}
+                  >
+                    {!isPro && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm rounded-[36px]">
+                        <div className="flex flex-col items-center gap-3 text-white">
+                          <svg
+                            className="w-12 h-12"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            />
+                          </svg>
+                          <span className="text-sm font-bold">
+                            Subscription Required
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      className={`absolute inset-0 h-full w-full bg-linear-to-br ${category.gradientTheme} opacity-0 group-hover:opacity-20 dark:group-hover:opacity-30 blur-3xl transition-all duration-700 ease-in-out rounded-[36px] bg-size-[200%_200%] bg-top-left  group-hover:bg-bottom-right`}
+                    />
 
                     <div className="relative h-full flex flex-col p-8 rounded-[35px] bg-white/70 dark:bg-zinc-900/80 backdrop-blur-2xl overflow-hidden border border-white/20 dark:border-white/5 transition-colors duration-500 group-hover:bg-white/80 dark:group-hover:bg-zinc-900/90">
-                      
                       <div className="flex justify-between items-start mb-8">
-                        <div className={`relative w-16 h-16 rounded-2xl bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 shadow-inner border border-white/40 dark:border-white/5 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${category.iconColor}`}>
-
-                           <div className={`absolute inset-0 bg-linear-to-br ${category.gradientTheme} opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500 rounded-2xl`}></div>
-                          <Icon size={30} strokeWidth={2} className="relative z-10" />
+                        <div
+                          className={`relative w-16 h-16 rounded-2xl bg-linear-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 shadow-inner border border-white/40 dark:border-white/5 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${category.iconColor}`}
+                        >
+                          <div
+                            className={`absolute inset-0 bg-linear-to-br ${category.gradientTheme} opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500 rounded-2xl`}
+                          ></div>
+                          <Icon
+                            size={30}
+                            strokeWidth={2}
+                            className="relative z-10"
+                          />
                         </div>
 
                         {isPro && (
                           <div className="flex items-center gap-1.5 bg-linear-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 backdrop-blur-md border border-amber-200/50 dark:border-amber-700/30 pl-2 pr-3 py-1.5 rounded-full shadow-sm">
-                            <Sparkles size={14} className="text-amber-500" fill="currentColor" />
+                            <Sparkles
+                              size={14}
+                              className="text-amber-500"
+                              fill="currentColor"
+                            />
                             <span className="text-[11px] font-extrabold tracking-widest text-amber-700 dark:text-amber-400 uppercase leading-none">
                               Pro
                             </span>
@@ -215,14 +322,15 @@ const GetAllTest = () => {
                           .map((item, i) => (
                             <span
                               key={i}
-                              className={`text-xs font-semibold px-3.5 py-2 rounded-lg bg-gray-100/80 dark:bg-zinc-800/80 text-gray-600 dark:text-gray-300 border border-gray-200/50 dark:border-white/5 transition-colors duration-300 group-hover:border-${category.iconColor.split('-')[1]}-200/50 dark:group-hover:border-${category.iconColor.split('-')[1]}-800/50 group-hover:bg-white dark:group-hover:bg-zinc-800`}
+                              className={`text-xs font-semibold px-3.5 py-2 rounded-lg bg-gray-100/80 dark:bg-zinc-800/80 text-gray-600 dark:text-gray-300 border border-gray-200/50 dark:border-white/5 transition-colors duration-300 group-hover:border-${category.iconColor.split("-")[1]}-200/50 dark:group-hover:border-${category.iconColor.split("-")[1]}-800/50 group-hover:bg-white dark:group-hover:bg-zinc-800`}
                             >
                               {item}
                             </span>
                           ))}
                         {(category.classes || category.exams)?.length > 3 && (
                           <span className="text-xs font-bold px-3.5 py-2 rounded-lg bg-gray-50 dark:bg-zinc-800/50 text-gray-500 dark:text-gray-400 border border-transparent">
-                            +{(category.classes || category.exams).length - 3} more
+                            +{(category.classes || category.exams).length - 3}{" "}
+                            more
                           </span>
                         )}
                       </div>
@@ -230,14 +338,18 @@ const GetAllTest = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCategoryClick(category.route);
+                          handleCategoryClick(category.route, category.id);
                         }}
                         className="relative z-10 w-full group/btn"
                       >
-                        <div className={`relative overflow-hidden rounded-xl p-px bg-linear-to-r ${category.gradientTheme} shadow-md transition-all duration-300 group-hover/btn:shadow-lg group-hover/btn:scale-[1.02]`}>
-                           <div className="absolute inset-0 bg-white/20 dark:bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"></div>
-                           
-                          <div className={`relative flex h-full w-full items-center justify-center rounded-[11px] bg-linear-to-r ${category.gradientTheme} px-4 py-3.5 text-[15px] font-bold text-white transition-all duration-300`}>
+                        <div
+                          className={`relative overflow-hidden rounded-xl p-px bg-linear-to-r ${category.gradientTheme} shadow-md transition-all duration-300 group-hover/btn:shadow-lg group-hover/btn:scale-[1.02]`}
+                        >
+                          <div className="absolute inset-0 bg-white/20 dark:bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"></div>
+
+                          <div
+                            className={`relative flex h-full w-full items-center justify-center rounded-[11px] bg-linear-to-r ${category.gradientTheme} px-4 py-3.5 text-[15px] font-bold text-white transition-all duration-300`}
+                          >
                             <span className="flex items-center gap-3">
                               Explore Now
                               <ArrowRight

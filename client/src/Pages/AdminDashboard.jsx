@@ -1,7 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import DashboardHome from "../componets/admin/DashBoardHome";
-import UploadCSV from "../componets/admin/UploadCsv";
+import DashboardHome from "../componets/admin/DashboardHome";
+import UploadCSV from "../componets/admin/UploadCSV";
 import TestAttempts from "../componets/admin/TestAttempts";
 import QuestionPapers from "../componets/admin/QuestionPapers";
  

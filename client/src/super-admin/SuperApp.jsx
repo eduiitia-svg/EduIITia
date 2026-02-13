@@ -9,6 +9,7 @@ import Orders from "./Pages/Orders";
 import SubscriptionPlans from "./Pages/SubscriptionPlans";
 import { useState } from "react";
 import { motion } from "motion/react";
+import TeacherPlanManagement from "../componets/admin/TeacherPlanManagement";
 
 function SuperApp() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -30,14 +31,16 @@ function SuperApp() {
         <main className="p-6 pt-24">
           <Routes>
             <Route index element={<Navigate to="dashboard" replace />} />
-
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="admins" element={<ManageAdmins />} />
             <Route path="users" element={<ManageUsers />} />
             <Route path="plans" element={<SubscriptionPlans />} />
+            <Route
+              path="teacher-plans"
+              element={<TeacherPlanManagement />}
+            />
             <Route path="orders" element={<Orders />} />
             <Route path="analytics" element={<Analytics />} />
-            
             <Route path="*" element={<Navigate to="dashboard" replace />} />
           </Routes>
         </main>

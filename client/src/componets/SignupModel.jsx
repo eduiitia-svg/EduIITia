@@ -14,16 +14,21 @@ import {
   Clock,
   AlertCircle,
   User,
+  GraduationCap,
+  Briefcase,
 } from "lucide-react";
+import { useNavigate } from "react-router";
 
 const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate()
   const urlParams = new URLSearchParams(window.location.search);
   const urlCode = urlParams.get("code");
   const urlEmail = urlParams.get("email");
   const urlName = urlParams.get("name");
 
   const [signupMode, setSignupMode] = useState(urlCode ? "institute" : null);
+  const [selectedRole, setSelectedRole] = useState(null); 
 
   const [formData, setFormData] = useState({
     name: urlName || "",
@@ -110,39 +115,60 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleDirectSignup = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
 
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
+const handleDirectSignup = async () => {
+  if (!selectedRole) {
+    toast.error("Please select your role (Student or Teacher)");
+    return;
+  }
 
-    try {
-      const registerData = {
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: "student",
-        createdBy: null,
-        registrationCode: null,
-      };
+  if (!formData.name || !formData.email || !formData.password) {
+    toast.error("Please fill in all fields");
+    return;
+  }
 
-      await dispatch(register(registerData)).unwrap();
+  if (formData.password.length < 6) {
+    toast.error("Password must be at least 6 characters");
+    return;
+  }
+
+  try {
+    const registerData = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: selectedRole === "teacher" ? "admin" : "student",
+      createdBy: null,
+      registrationCode: null,
+    };
+
+    await dispatch(register(registerData)).unwrap();
+    
+    if (selectedRole === "teacher") {
+     
       toast.success(
-        "Account created! You can now login and access demo tests.",
+        "Teacher account created! Redirecting to pricing plans..."
       );
-    } catch (error) {
-      const errorMessage =
-        typeof error === "string"
-          ? error
-          : error?.message || "Registration failed";
-      toast.error(errorMessage);
+      
+      onClose();
+      setShowSignup(false);
+      
+      setTimeout(() => {
+        navigate("/teacher-pricing")
+      }, 1000);
+    } else {
+      toast.success(
+        "Account created! You can now login and access demo tests."
+      );
     }
-  };
+  } catch (error) {
+    const errorMessage =
+      typeof error === "string"
+        ? error
+        : error?.message || "Registration failed";
+    toast.error(errorMessage);
+  }
+};
 
   const handleSubmitRequest = async () => {
     const codeToVerify = formData.registrationCode;
@@ -244,8 +270,10 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
     setFormData({ name: "", email: "", password: "", registrationCode: "" });
     setVerificationStep("code");
     setSignupMode(null);
+    setSelectedRole(null);
   };
 
+  // Role selection screen (first screen)
   if (!signupMode) {
     return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 animate-fadeIn p-4">
@@ -293,10 +321,10 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
                       Direct Signup
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      Sign up instantly and access demo tests immediately
+                      Sign up instantly as a student or teacher
                     </p>
                     <p className="text-[#10b981] text-xs mt-2 font-medium">
-                      ✓ No code required • ✓ Instant access to demos
+                      ✓ No code required • ✓ Choose your role
                     </p>
                   </div>
                 </div>
@@ -346,6 +374,7 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
     );
   }
 
+  // Direct signup with role selection
   if (signupMode === "direct") {
     return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 animate-fadeIn p-4">
@@ -371,28 +400,70 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
                 Create Your Account
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                Sign up and start with demo tests
+                Select your role and sign up
               </p>
             </div>
 
             <div className="space-y-4">
-              <div className="p-3 bg-[#10b981]/10 border border-[#10b981]/30 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2
-                    className="text-[#10b981] mt-0.5 shrink-0"
-                    size={18}
-                  />
-                  <div>
-                    <p className="text-gray-900 dark:text-white font-medium text-xs mb-0.5">
-                      Instant Access
-                    </p>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">
-                      Start practicing with demo tests immediately after signup
-                    </p>
-                  </div>
+              {/* Role Selection */}
+              <div>
+                <label className="block text-gray-700 dark:text-gray-300 text-xs mb-2 font-medium">
+                  I am a *
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole("student")}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedRole === "student"
+                        ? "border-[#10b981] bg-[#10b981]/10"
+                        : "border-gray-300 dark:border-[#2a2a2a] hover:border-[#10b981]"
+                    }`}
+                  >
+                    <GraduationCap
+                      className={`mx-auto mb-2 ${
+                        selectedRole === "student"
+                          ? "text-[#10b981]"
+                          : "text-gray-400"
+                      }`}
+                      size={28}
+                    />
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Student
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Take tests & learn
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole("teacher")}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedRole === "teacher"
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-gray-300 dark:border-[#2a2a2a] hover:border-blue-500"
+                    }`}
+                  >
+                    <Briefcase
+                      className={`mx-auto mb-2 ${
+                        selectedRole === "teacher"
+                          ? "text-blue-500"
+                          : "text-gray-400"
+                      }`}
+                      size={28}
+                    />
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Teacher
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Create mock tests
+                    </div>
+                  </button>
                 </div>
               </div>
 
+            
               <div>
                 <label className="block text-gray-700 dark:text-gray-300 text-xs mb-1.5 font-medium">
                   Full Name
@@ -442,6 +513,7 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
                 onClick={handleDirectSignup}
                 disabled={
                   loading ||
+                  !selectedRole ||
                   !formData.name ||
                   !formData.email ||
                   !formData.password
@@ -488,6 +560,7 @@ const SignupModal = ({ setShowLogin, setShowSignup, onClose }) => {
     );
   }
 
+  // Institute registration flow (unchanged)
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 animate-fadeIn p-4">
       <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl shadow-2xl w-full max-w-[950px] overflow-hidden relative animate-slideUp">

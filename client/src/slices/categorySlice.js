@@ -13,6 +13,36 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, auth } from "../config/firebase";
+
+const getAllowedExamTypesAndSubjects = async (userId) => {
+  try {
+    const userDoc = await getDoc(doc(db, "users", userId));
+    if (!userDoc.exists()) return { examTypes: null, subjects: null };
+
+    const userData = userDoc.data();
+    const userRole = userData.role;
+
+    if (userRole === "superadmin") {
+      return { examTypes: null, subjects: null };
+    }
+
+    if (userRole === "admin" && userData.teacherSubscription) {
+      const subscription = userData.teacherSubscription;
+      if (subscription.isActive) {
+        return {
+          examTypes: subscription.examType ? [subscription.examType] : null,
+          subjects: subscription.subject ? [subscription.subject] : null,
+        };
+      }
+    }
+
+    return { examTypes: null, subjects: null };
+  } catch (error) {
+    console.error("Error fetching allowed permissions:", error);
+    return { examTypes: null, subjects: null };
+  }
+};
+
 export const getAllCategories = createAsyncThunk(
   "category/getAllCategories",
   async (_, { rejectWithValue }) => {
@@ -31,14 +61,14 @@ export const getAllCategories = createAsyncThunk(
         q = query(
           categoriesRef,
           where("createdBy", "==", user.uid),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       } else if (userRole === "student") {
         if (userData.createdBy) {
           q = query(
             categoriesRef,
             where("createdBy", "==", userData.createdBy),
-            orderBy("createdAt", "desc")
+            orderBy("createdAt", "desc"),
           );
         } else {
           q = query(categoriesRef, orderBy("createdAt", "desc"));
@@ -64,7 +94,7 @@ export const getAllCategories = createAsyncThunk(
       console.error("❌ Error fetching categories:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getCategoriesByCreator = createAsyncThunk(
   "category/getCategoriesByCreator",
@@ -76,7 +106,7 @@ export const getCategoriesByCreator = createAsyncThunk(
       const q = query(
         categoriesRef,
         where("createdBy", "==", userId),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
       );
       const querySnapshot = await getDocs(q);
       if (querySnapshot.empty) {
@@ -95,33 +125,89 @@ export const getCategoriesByCreator = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
+
 export const createCategory = createAsyncThunk(
   "category/createCategory",
-  async ({ name, type, subjects, icon }, { rejectWithValue }) => {
+  async ({ name, type, subjects, icon, mainCategory }, { rejectWithValue }) => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) throw new Error("User not authenticated");
-      const validatedSubjects = subjects.map(subj => {
-        if (typeof subj === 'string') {
+
+      const userDoc = await getDoc(doc(db, "users", userId));
+      const userData = userDoc.data();
+      const userRole = userData.role;
+
+      let finalMainCategory = mainCategory; 
+      let allowedExamType = null;
+
+      if (userRole === "admin" && userData.teacherSubscription) {
+        const subscription = userData.teacherSubscription;
+        
+        if (subscription.mainCategory && subscription.mainCategory !== "All") {
+          finalMainCategory = subscription.mainCategory;
+        }
+        
+        allowedExamType = subscription.examType || null;
+
+        if (
+          subscription.isActive &&
+          allowedExamType &&
+          allowedExamType !== "All"
+        ) {
+          if (type !== allowedExamType) {
+            throw new Error(
+              `Your subscription only allows creating categories for "${allowedExamType}" exam type. Please upgrade or choose a different plan.`,
+            );
+          }
+        }
+      }
+
+      const { examTypes: allowedTypes, subjects: allowedSubjects } =
+        await getAllowedExamTypesAndSubjects(userId);
+
+      if (allowedTypes !== null && !allowedTypes.includes(type)) {
+        throw new Error(
+          `You don't have permission to create categories for "${type}" exam type. Your subscription only allows: ${allowedTypes.join(", ")}`,
+        );
+      }
+
+      if (allowedSubjects !== null) {
+        const invalidSubjects = subjects
+          .map((s) => (typeof s === "string" ? s : s.name))
+          .filter((subjectName) => !allowedSubjects.includes(subjectName));
+
+        if (invalidSubjects.length > 0) {
+          throw new Error(
+            `You don't have permission to add subjects: ${invalidSubjects.join(", ")}. Your subscription only allows: ${allowedSubjects.join(", ")}`,
+          );
+        }
+      }
+
+      const validatedSubjects = subjects.map((subj) => {
+        if (typeof subj === "string") {
           return { name: subj, subcategories: [] };
         }
         return {
           name: subj.name,
-          subcategories: subj.subcategories || []
+          subcategories: subj.subcategories || [],
         };
       });
+
       const categoryData = {
         name: name.trim(),
-        type,
+        type, // This is the examType (e.g., "CBSE Board")
         subjects: validatedSubjects,
         icon: icon || "BookOpen",
         createdBy: userId,
         createdAt: serverTimestamp(),
         isActive: true,
+        mainCategory: finalMainCategory, // ← This must match the subscription's mainCategory
       };
+
       const docRef = await addDoc(collection(db, "categories"), categoryData);
+
       return {
         id: docRef.id,
         ...categoryData,
@@ -130,41 +216,87 @@ export const createCategory = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
+
 export const updateCategory = createAsyncThunk(
   "category/updateCategory",
   async ({ categoryId, updates }, { rejectWithValue }) => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) throw new Error("User not authenticated");
+
       const categoryRef = doc(db, "categories", categoryId);
       const categoryDoc = await getDoc(categoryRef);
+
       if (!categoryDoc.exists()) {
         throw new Error("Category not found");
       }
+
       const userDoc = await getDoc(doc(db, "users", userId));
-      const userRole = userDoc.data()?.role;
+      const userData = userDoc.data();
+      const userRole = userData?.role;
       const categoryCreator = categoryDoc.data().createdBy;
+
       if (userRole !== "superadmin" && categoryCreator !== userId) {
         throw new Error("You don't have permission to update this category");
       }
+
+      const { examTypes: allowedTypes, subjects: allowedSubjects } =
+        await getAllowedExamTypesAndSubjects(userId);
+
+      if (
+        updates.type &&
+        allowedTypes !== null &&
+        !allowedTypes.includes(updates.type)
+      ) {
+        throw new Error(
+          `You don't have permission to change category type to "${updates.type}". Your subscription only allows: ${allowedTypes.join(", ")}`,
+        );
+      }
+
+      if (updates.subjects && allowedSubjects !== null) {
+        const invalidSubjects = updates.subjects
+          .map((s) => (typeof s === "string" ? s : s.name))
+          .filter(
+            (subjectName) =>
+              subjectName.trim() !== "" &&
+              !allowedSubjects.includes(subjectName),
+          );
+
+        if (invalidSubjects.length > 0) {
+          throw new Error(
+            `You don't have permission to add subjects: ${invalidSubjects.join(", ")}. Your subscription only allows: ${allowedSubjects.join(", ")}`,
+          );
+        }
+      }
+
       const updateData = {
         ...updates,
         updatedAt: serverTimestamp(),
       };
+
+      if (
+        userData?.role === "admin" &&
+        userData?.teacherSubscription?.mainCategory
+      ) {
+        updateData.mainCategory = userData.teacherSubscription.mainCategory;
+      }
+
       if (updates.subjects) {
-        updateData.subjects = updates.subjects.map(subj => {
-          if (typeof subj === 'string') {
+        updateData.subjects = updates.subjects.map((subj) => {
+          if (typeof subj === "string") {
             return { name: subj, subcategories: [] };
           }
           return {
             name: subj.name,
-            subcategories: subj.subcategories || []
+            subcategories: subj.subcategories || [],
           };
         });
       }
+
       await updateDoc(categoryRef, updateData);
+
       return {
         categoryId,
         updates: {
@@ -175,8 +307,9 @@ export const updateCategory = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
+
 export const deleteCategory = createAsyncThunk(
   "category/deleteCategory",
   async (categoryId, { rejectWithValue }) => {
@@ -205,13 +338,16 @@ export const deleteCategory = createAsyncThunk(
       let testsUsingCategory = 0;
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.categoryId === categoryId || data.categoryName === categoryDoc.data().name) {
+        if (
+          data.categoryId === categoryId ||
+          data.categoryName === categoryDoc.data().name
+        ) {
           testsUsingCategory++;
         }
       });
       if (testsUsingCategory > 0) {
         throw new Error(
-          `Cannot delete category. ${testsUsingCategory} test(s) are using this category. Please reassign or delete those tests first.`
+          `Cannot delete category. ${testsUsingCategory} test(s) are using this category. Please reassign or delete those tests first.`,
         );
       }
       await deleteDoc(categoryRef);
@@ -219,7 +355,7 @@ export const deleteCategory = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getCategoryById = createAsyncThunk(
   "category/getCategoryById",
@@ -239,7 +375,7 @@ export const getCategoryById = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 const categorySlice = createSlice({
   name: "category",
@@ -303,7 +439,7 @@ const categorySlice = createSlice({
         state.loading = false;
         const { categoryId, updates } = action.payload;
         state.categories = state.categories.map((cat) =>
-          cat.id === categoryId ? { ...cat, ...updates } : cat
+          cat.id === categoryId ? { ...cat, ...updates } : cat,
         );
         if (state.selectedCategory?.id === categoryId) {
           state.selectedCategory = { ...state.selectedCategory, ...updates };
@@ -320,7 +456,7 @@ const categorySlice = createSlice({
       .addCase(deleteCategory.fulfilled, (state, action) => {
         state.loading = false;
         state.categories = state.categories.filter(
-          (cat) => cat.id !== action.payload
+          (cat) => cat.id !== action.payload,
         );
         if (state.selectedCategory?.id === action.payload) {
           state.selectedCategory = null;

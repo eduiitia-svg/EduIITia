@@ -18,13 +18,12 @@ export const getAllOrders = createAsyncThunk(
       const q = query(ordersRef, orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
 
-      const orders = [];
+      const studentOrders = [];
 
       for (const docSnapshot of querySnapshot.docs) {
         const orderData = docSnapshot.data();
 
         let userId = null;
-
         if (orderData.userId) userId = orderData.userId;
         else if (typeof orderData.user === "string") userId = orderData.user;
         else if (orderData.user?.id) userId = orderData.user.id;
@@ -61,19 +60,82 @@ export const getAllOrders = createAsyncThunk(
           }
         }
 
-        orders.push({
+        studentOrders.push({
           id: docSnapshot.id,
           ...orderData,
           user: userData,
           plan: planData,
           createdAt: orderData.createdAt?.toDate() || null,
+          orderType: "student", 
         });
       }
 
+      const teacherOrdersRef = collection(db, "teacherOrders");
+      const teacherQuery = query(teacherOrdersRef, orderBy("createdAt", "desc"));
+      const teacherQuerySnapshot = await getDocs(teacherQuery);
+
+      const teacherOrders = [];
+
+      for (const docSnapshot of teacherQuerySnapshot.docs) {
+        const orderData = docSnapshot.data();
+
+        let userId = null;
+        if (orderData.userId) userId = orderData.userId;
+        else if (typeof orderData.user === "string") userId = orderData.user;
+        else if (orderData.user?.id) userId = orderData.user.id;
+
+        let userData = null;
+        if (userId) {
+          const userDocRef = doc(db, "users", userId);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const u = userDoc.data();
+            userData = {
+              id: userDoc.id,
+              name: u.name || null,
+              email: u.email || null,
+              role: u.role || null,
+            };
+          }
+        }
+
+        let planData = null;
+        if (orderData.planId) {
+          const planDocRef = doc(db, "teacherSubscriptionPlans", orderData.planId);
+          const planDoc = await getDoc(planDocRef);
+
+          if (planDoc.exists()) {
+            const p = planDoc.data();
+            planData = {
+              name: p.name,
+              price: p.price,
+              duration: p.duration,
+              type: p.type,
+            };
+          }
+        }
+
+        teacherOrders.push({
+          id: docSnapshot.id,
+          ...orderData,
+          user: userData,
+          plan: planData,
+          createdAt: orderData.createdAt?.toDate() || orderData.completedAt?.toDate() || null,
+          orderType: "teacher", 
+        });
+      }
+
+      const allOrders = [...studentOrders, ...teacherOrders].sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        return b.createdAt - a.createdAt;
+      });
+
       return {
         success: true,
-        count: orders.length,
-        data: orders,
+        count: allOrders.length,
+        data: allOrders,
       };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -95,30 +157,49 @@ export const getRevenueStats = createAsyncThunk(
         orders.push({
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate(),
+          orderType: "student",
         });
       });
 
-      const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+      const teacherOrdersRef = collection(db, "teacherOrders");
+      const teacherQ = query(teacherOrdersRef, where("status", "==", "completed"));
+      const teacherQuerySnapshot = await getDocs(teacherQ);
+
+      const teacherOrders = [];
+      teacherQuerySnapshot.forEach((doc) => {
+        teacherOrders.push({
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || doc.data().completedAt?.toDate(),
+          orderType: "teacher",
+        });
+      });
+
+      const allOrders = [...orders, ...teacherOrders];
+
+      const totalRevenue = allOrders.reduce((sum, o) => {
+        const amount = o.orderType === "teacher" ? (o.amount || 0) * 100 : (o.amount || 0);
+        return sum + amount;
+      }, 0);
 
       const now = new Date();
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
 
-      const weeklyOrders = orders.filter((o) => o.createdAt >= weekAgo);
-      const weeklyRevenue = weeklyOrders.reduce(
-        (sum, o) => sum + (o.amount || 0),
-        0
-      );
+      const weeklyOrders = allOrders.filter((o) => o.createdAt >= weekAgo);
+      const weeklyRevenue = weeklyOrders.reduce((sum, o) => {
+        const amount = o.orderType === "teacher" ? (o.amount || 0) * 100 : (o.amount || 0);
+        return sum + amount;
+      }, 0);
 
       const monthlyRevenue = {};
-      orders.forEach((order) => {
+      allOrders.forEach((order) => {
         if (order.createdAt) {
           const month = order.createdAt.toLocaleString("default", {
             month: "short",
             year: "numeric",
           });
-          monthlyRevenue[month] =
-            (monthlyRevenue[month] || 0) + (order.amount || 0);
+          const amount = order.orderType === "teacher" ? (order.amount || 0) * 100 : (order.amount || 0);
+          monthlyRevenue[month] = (monthlyRevenue[month] || 0) + amount;
         }
       });
 
@@ -138,7 +219,7 @@ export const getRevenueStats = createAsyncThunk(
         stats: {
           totalRevenue,
           weeklyRevenue,
-          totalOrders: orders.length,
+          totalOrders: allOrders.length,
           totalUsers,
           totalAdmins,
           monthlyRevenue,

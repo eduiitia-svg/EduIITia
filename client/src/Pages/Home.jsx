@@ -1,10 +1,10 @@
 import Hero from "../componets/Hero";
 import GetAllTest from "../componets/test/GetAllTest";
 import AboutPage from "../componets/AboutPage";
-import Pricing from "../componets/subscription-model/Pricing";
 import ContactPage from "../componets/ContactPage";
  import AppLayout from "../layout/AppLayout";
 import Testimonials from "../componets/Testimonials";
+import {Pricing} from "../componets/subscription-model/Pricing";
 
 const Home = () => {
 

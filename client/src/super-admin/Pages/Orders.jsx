@@ -69,11 +69,35 @@ const Orders = () => {
     {
       key: "amount",
       header: "Amount",
-      render: (o) => (
-        <span className="text-emerald-300 font-mono">
-          ₹{((o.amount || 0) / 100).toFixed(2)}
-        </span>
-      ),
+      render: (o) => {
+        const amount =
+          o.orderType === "teacher" ? o.amount || 0 : (o.amount || 0) / 100;
+
+        return (
+          <span className="text-emerald-300 font-mono">
+            ₹{amount.toFixed(2)}
+          </span>
+        );
+      },
+    },
+
+    {
+      key: "orderType",
+      header: "Type",
+      render: (o) => {
+        const isTeacher = o.orderType === "teacher";
+        return (
+          <span
+            className={`px-2 py-1 text-xs font-medium rounded-md border ${
+              isTeacher
+                ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+            }`}
+          >
+            {isTeacher ? "Teacher" : "Student"}
+          </span>
+        );
+      },
     },
 
     {

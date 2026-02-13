@@ -13,6 +13,7 @@ import adminReducer from "../slices/adminSlice";
 import paymentReducer from "../slices/paymentSlice";
 import categoryReducer from "../slices/categorySlice";
 import studyMaterialReducer from "../slices/studyMaterialSlice";
+import teacherPaymentReducer from "../slices/teacherPaymentSlice";
 
 export default configureStore({
   reducer: {
@@ -30,6 +31,7 @@ export default configureStore({
     admin: adminReducer,
     payment: paymentReducer,
     category: categoryReducer,
+     teacherPayment: teacherPaymentReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

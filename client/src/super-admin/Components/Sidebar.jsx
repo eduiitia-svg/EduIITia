@@ -33,6 +33,7 @@ const Sidebar = ({ open, setOpen }) => {
     { name: "Admins", path: "/super/admins", icon: <ShieldCheck size={20} /> },
     { name: "Users", path: "/super/users", icon: <Users size={20} /> },
     { name: "Plans", path: "/super/plans", icon: <CreditCard size={20} /> },
+    { name: "Teacher Plans", path: "/super/teacher-plans", icon: <CreditCard size={20} /> },
     { name: "Orders", path: "/super/orders", icon: <FileText size={20} /> },
     {
       name: "Analytics",
@@ -231,16 +232,6 @@ const Sidebar = ({ open, setOpen }) => {
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: "#0f172a",
-            color: "#fff",
-            border: "1px solid rgba(255,255,255,0.1)",
-          },
-        }}
-      />
       {SidebarContent}
     </>
   );

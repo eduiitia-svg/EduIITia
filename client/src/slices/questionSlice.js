@@ -34,7 +34,7 @@ export const uploadCSVQuestions = createAsyncThunk(
       subject,
       subcategory,
     },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const userId = auth.currentUser?.uid;
@@ -49,7 +49,7 @@ export const uploadCSVQuestions = createAsyncThunk(
         parsedQuestions = questions.map((q) => ({
           questionText: q.questionText || "",
           options: [q.optionA, q.optionB, q.optionC, q.optionD].filter(
-            (opt) => opt !== undefined && opt !== null && opt !== ""
+            (opt) => opt !== undefined && opt !== null && opt !== "",
           ),
           images: Array.isArray(q.images) ? q.images : [],
           correctAnswer: q.correctAnswer || "",
@@ -59,8 +59,7 @@ export const uploadCSVQuestions = createAsyncThunk(
               explanation: q.explanation.trim(),
             }),
         }));
-      }
-      else {
+      } else {
         if (!csvFile) {
           throw new Error("CSV file is required");
         }
@@ -74,7 +73,7 @@ export const uploadCSVQuestions = createAsyncThunk(
           .filter((line) => line.length > 0);
         if (lines.length < 2) {
           throw new Error(
-            "CSV file appears empty or invalid. Please use AI Parser for better results."
+            "CSV file appears empty or invalid. Please use AI Parser for better results.",
           );
         }
         const headers = lines[0].split(",").map((h) =>
@@ -82,7 +81,7 @@ export const uploadCSVQuestions = createAsyncThunk(
             .trim()
             .toLowerCase()
             .replace(/[_\-\s]/g, "")
-            .replace(/['"]/g, "")
+            .replace(/['"]/g, ""),
         );
         const findHeader = (possibleNames) => {
           for (let name of possibleNames) {
@@ -156,7 +155,7 @@ export const uploadCSVQuestions = createAsyncThunk(
           optionDIndex === -1
         ) {
           throw new Error(
-            `Suggestion: Use AI Parser mode for automatic question extraction from any document format.`
+            `Suggestion: Use AI Parser mode for automatic question extraction from any document format.`,
           );
         }
         let successCount = 0;
@@ -176,9 +175,9 @@ export const uploadCSVQuestions = createAsyncThunk(
                 currentValue += char;
               }
             }
-            rowValues.push(currentValue.trim()); 
+            rowValues.push(currentValue.trim());
             const cleanedValues = rowValues.map((v) =>
-              v.replace(/^["']|["']$/g, "").trim()
+              v.replace(/^["']|["']$/g, "").trim(),
             );
             const questionText = cleanedValues[questionIndex] || "";
             const optionA = cleanedValues[optionAIndex] || "";
@@ -186,9 +185,7 @@ export const uploadCSVQuestions = createAsyncThunk(
             const optionC = cleanedValues[optionCIndex] || "";
             const optionD = cleanedValues[optionDIndex] || "";
             if (!questionText || !optionA || !optionB || !optionC || !optionD) {
-              console.warn(
-                `Row ${i + 1}: Missing required fields, skipping`
-              );
+              console.warn(`Row ${i + 1}: Missing required fields, skipping`);
               failedCount++;
               continue;
             }
@@ -210,9 +207,9 @@ export const uploadCSVQuestions = createAsyncThunk(
                 const matchedOption = allOptions.find(
                   (opt) =>
                     opt.toLowerCase().includes(answerValue.toLowerCase()) ||
-                    answerValue.toLowerCase().includes(opt.toLowerCase())
+                    answerValue.toLowerCase().includes(opt.toLowerCase()),
                 );
-                correctAnswer = matchedOption || optionA; 
+                correctAnswer = matchedOption || optionA;
               }
             } else {
               correctAnswer = optionA;
@@ -233,7 +230,7 @@ export const uploadCSVQuestions = createAsyncThunk(
             const questionData = {
               questionText: questionText,
               options: [optionA, optionB, optionC, optionD].filter(
-                (opt) => opt !== undefined && opt !== null && opt !== ""
+                (opt) => opt !== undefined && opt !== null && opt !== "",
               ),
               images,
               correctAnswer: correctAnswer,
@@ -252,13 +249,41 @@ export const uploadCSVQuestions = createAsyncThunk(
         if (failedCount > successCount || parsedQuestions.length === 0) {
           throw new Error(
             ` Recommended Solution: Use AI Parser mode for automatic question extraction.
-              AI Parser supports: CSV formats.`
+              AI Parser supports: CSV formats.`,
           );
         }
       }
       if (parsedQuestions.length === 0) {
         throw new Error(`Recommended Solution: Please use AI Parser mode .`);
       }
+      const userDoc = await getDoc(doc(db, "users", userId));
+      let categoryType = null;
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+
+        if (
+          userData.role === "admin" &&
+          userData.teacherSubscription?.isActive
+        ) {
+          const mainCat = userData.teacherSubscription.mainCategory;
+
+          const categoryTypeMap = {
+            school: "School",
+            entrance: "Entrance",
+            recruitment: "Recruitment",
+          };
+
+          categoryType = categoryTypeMap[mainCat] || mainCat || null
+        } else if (userDoc.data().role === "superadmin") {
+          const categoryRef = doc(db, "categories", categoryId);
+          const categorySnap = await getDoc(categoryRef);
+          if (categorySnap.exists()) {
+            categoryType = categorySnap.data().type || null;
+          }
+        }
+      }
+
       const questionSetData = {
         testName: testName || "",
         title: title || "",
@@ -268,6 +293,7 @@ export const uploadCSVQuestions = createAsyncThunk(
         questions: parsedQuestions,
         categoryId,
         categoryName,
+        categoryType,
         subject,
         createdBy: userId,
         uploadedViaAI: uploadedViaAI || false,
@@ -305,11 +331,11 @@ export const uploadCSVQuestions = createAsyncThunk(
       } else {
         return rejectWithValue(
           `${errorMessage}
-            Having trouble with CSV format? Try using AI Parser mode for automatic question extraction from any document!`
+            Having trouble with CSV format? Try using AI Parser mode for automatic question extraction from any document!`,
         );
       }
     }
-  }
+  },
 );
 export const uploadAIParsedQuestions = createAsyncThunk(
   "questions/uploadAIParsedQuestions",
@@ -327,7 +353,7 @@ export const uploadAIParsedQuestions = createAsyncThunk(
       subject,
       subcategory,
     },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const userId = auth.currentUser?.uid;
@@ -375,7 +401,7 @@ export const uploadAIParsedQuestions = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const updateSingleQuestion = createAsyncThunk(
   "questions/updateSingleQuestion",
@@ -404,7 +430,7 @@ export const updateSingleQuestion = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const addQuestionImages = createAsyncThunk(
   "questions/addQuestionImages",
@@ -440,7 +466,7 @@ export const addQuestionImages = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const deleteQuestionImage = createAsyncThunk(
   "questions/deleteQuestionImage",
@@ -481,7 +507,7 @@ export const deleteQuestionImage = createAsyncThunk(
       console.error("Error deleting question image:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const deleteQuestion = createAsyncThunk(
   "questions/deleteQuestion",
@@ -512,7 +538,7 @@ export const deleteQuestion = createAsyncThunk(
       console.error("Error deleting question:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const deleteQuestionPaper = createAsyncThunk(
   "questions/deleteQuestionPaper",
@@ -533,7 +559,7 @@ export const deleteQuestionPaper = createAsyncThunk(
       console.error("Error deleting question paper:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getAllQuestionPapersByCreator = createAsyncThunk(
   "questions/getAllQuestionPapersByCreator",
@@ -545,7 +571,7 @@ export const getAllQuestionPapersByCreator = createAsyncThunk(
       const q = query(
         questionsRef,
         where("createdBy", "==", userId),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
       );
       const querySnapshot = await getDocs(q);
       if (querySnapshot.empty) {
@@ -570,7 +596,7 @@ export const getAllQuestionPapersByCreator = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getAllQuestionPapers = createAsyncThunk(
   "questions/getAllQuestionPapers",
@@ -584,7 +610,7 @@ export const getAllQuestionPapers = createAsyncThunk(
         q = query(
           questionsRef,
           where("createdBy", "==", userId),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       } else {
         q = query(questionsRef, orderBy("createdAt", "desc"));
@@ -604,7 +630,7 @@ export const getAllQuestionPapers = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getPapersByType = createAsyncThunk(
   "questions/getPapersByType",
@@ -618,13 +644,13 @@ export const getPapersByType = createAsyncThunk(
           questionsRef,
           where("testType", "==", testType),
           where("createdBy", "==", userId),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       } else {
         q = query(
           questionsRef,
           where("testType", "==", testType),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       }
       const querySnapshot = await getDocs(q);
@@ -673,7 +699,7 @@ export const getPapersByType = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getPapersByCategory = createAsyncThunk(
   "questions/getPapersByCategory",
@@ -687,13 +713,13 @@ export const getPapersByCategory = createAsyncThunk(
           questionsRef,
           where("categoryId", "==", categoryId),
           where("createdBy", "==", userId),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       } else {
         q = query(
           questionsRef,
           where("categoryId", "==", categoryId),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       }
       const querySnapshot = await getDocs(q);
@@ -719,13 +745,13 @@ export const getPapersByCategory = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getPapersBySubject = createAsyncThunk(
   "questions/getPapersBySubject",
   async (
     { categoryId, subject, filterByCreator = true },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const userId = auth.currentUser?.uid;
@@ -737,14 +763,14 @@ export const getPapersBySubject = createAsyncThunk(
           where("categoryId", "==", categoryId),
           where("subject", "==", subject),
           where("createdBy", "==", userId),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       } else {
         q = query(
           questionsRef,
           where("categoryId", "==", categoryId),
           where("subject", "==", subject),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       }
       const querySnapshot = await getDocs(q);
@@ -770,13 +796,13 @@ export const getPapersBySubject = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 export const getPapersBySubcategory = createAsyncThunk(
   "questions/getPapersBySubcategory",
   async (
     { categoryId, subject, subcategory, filterByCreator = true },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const userId = auth.currentUser?.uid;
@@ -789,7 +815,7 @@ export const getPapersBySubcategory = createAsyncThunk(
           where("subject", "==", subject),
           where("subcategory", "==", subcategory),
           where("createdBy", "==", userId),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       } else {
         q = query(
@@ -797,7 +823,7 @@ export const getPapersBySubcategory = createAsyncThunk(
           where("categoryId", "==", categoryId),
           where("subject", "==", subject),
           where("subcategory", "==", subcategory),
-          orderBy("createdAt", "desc")
+          orderBy("createdAt", "desc"),
         );
       }
       const querySnapshot = await getDocs(q);
@@ -823,7 +849,7 @@ export const getPapersBySubcategory = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 const questionSlice = createSlice({
   name: "questions",
@@ -923,7 +949,7 @@ const questionSlice = createSlice({
       .addCase(deleteQuestionPaper.fulfilled, (state, action) => {
         state.loading = false;
         state.papers = state.papers.filter(
-          (paper) => paper.id !== action.payload.data.testId
+          (paper) => paper.id !== action.payload.data.testId,
         );
       })
       .addCase(deleteQuestionPaper.rejected, (state, action) => {

@@ -14,6 +14,7 @@ import {
   TrendingUpDown,
   Moon,
   Sun,
+  Lock,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../slices/authSlice";
@@ -27,6 +28,20 @@ const Sidebar = () => {
   const { user, loading } = useSelector((state) => state.auth);
   const [loggingOut, setLoggingOut] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { teacherSubscription } = useSelector((state) => state.subscription);
+
+
+  const hasFeatureAccess = (featureName) => {
+  if (
+    !teacherSubscription?.isActive ||
+    !teacherSubscription?.hasSubscription
+  ) {
+    return false;
+  }
+  
+  const features = teacherSubscription?.features || []
+  return features.includes(featureName);
+};
 
   const handleLogout = async () => {
     try {
@@ -47,41 +62,51 @@ const Sidebar = () => {
       path: "/admin/dashboard",
       label: "Dashboard",
       icon: <Home size={20} />,
+      featureName: "Dashboard",
+      alwaysAccessible: true,
     },
     {
       path: "/admin/upload",
       label: "Upload Questions",
       icon: <UploadCloud size={20} />,
+      featureName: "Upload Questions",
     },
     {
       path: "/admin/papers",
       label: "Question Papers",
       icon: <FileText size={20} />,
+      featureName: "Question Papers",
     },
     {
       path: "/admin/study-materials",
       label: "Study Material",
       icon: <BookAudioIcon size={20} />,
+      featureName: "Study Material",
     },
     {
       path: "/admin/attempts",
       label: "Test Attempts",
       icon: <Users size={20} />,
+      featureName: "Test Attempts",
     },
     {
       path: "/admin/categories",
       label: "Categories",
       icon: <FolderPlus size={20} />,
+      featureName: "Categories",
     },
     {
       path: "/admin/student-approval",
       label: "Approve/Reject Students",
       icon: <CloudCheck size={20} />,
+      featureName: "Approve/Reject Students",
+      alwaysAccessible: true,
     },
     {
       path: "/admin/testimonials",
       label: "Add Testimonials",
       icon: <TrendingUpDown size={20} />,
+      featureName: "Add Testimonials",
     },
   ];
 
@@ -172,54 +197,77 @@ const Sidebar = () => {
         </div>
 
         <nav className="mt-2 px-4 space-y-1">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `relative group flex items-center gap-3 p-3.5 rounded-xl transition-all duration-300 overflow-hidden ${
-                  isActive
-                    ? "text-[#020403] font-semibold"
-                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-linear-to-r from-[#4FFFB0] to-teal-400 rounded-xl"
-                      initial={false}
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 30,
-                      }}
-                    />
-                  )}
+          {menuItems.map((item) => {
+            const isLocked =
+              !item.alwaysAccessible && !hasFeatureAccess(item.featureName);
 
-                  <span className="relative z-10 flex items-center gap-3">
-                    <span
-                      className={`transition-transform duration-300 ${
-                        isActive ? "scale-110" : "group-hover:scale-110"
-                      }`}
-                    >
-                      {item.icon}
+            return (
+              <NavLink
+                key={item.path}
+                to={isLocked ? "#" : item.path}
+                onClick={(e) => {
+                  if (isLocked) {
+                    e.preventDefault();
+                    toast.error(
+                      `${item.label} requires an active subscription`,
+                    );
+                    navigate("/teacher-pricing");
+                  }
+                }}
+                className={({ isActive }) =>
+                  `relative group flex items-center gap-3 p-3.5 rounded-xl transition-all duration-300 overflow-hidden ${
+                    isLocked
+                      ? "opacity-60 cursor-not-allowed"
+                      : isActive
+                        ? "text-[#020403] font-semibold"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && !isLocked && (
+                      <motion.div
+                        layoutId="activeTab"
+                        className="absolute inset-0 bg-linear-to-r from-[#4FFFB0] to-teal-400 rounded-xl"
+                        initial={false}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+
+                    <span className="relative z-10 flex items-center gap-3 flex-1">
+                      <span
+                        className={`transition-transform duration-300 ${
+                          isActive && !isLocked
+                            ? "scale-110"
+                            : "group-hover:scale-110"
+                        }`}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="tracking-wide">{item.label}</span>
                     </span>
-                    <span className="tracking-wide">{item.label}</span>
-                  </span>
 
-                  {!isActive && (
-                    <ChevronRight
-                      size={16}
-                      className="ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-[#4FFFB0]"
-                    />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+                    {isLocked ? (
+                      <Lock
+                        size={16}
+                        className="ml-auto text-amber-500 dark:text-amber-400 relative z-10"
+                      />
+                    ) : !isActive ? (
+                      <ChevronRight
+                        size={16}
+                        className="ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-[#4FFFB0]"
+                      />
+                    ) : null}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 

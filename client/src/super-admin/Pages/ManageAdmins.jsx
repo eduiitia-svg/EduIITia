@@ -19,6 +19,11 @@ import {
   Building2,
   Copy,
   Link2,
+  BookOpen,
+  BarChart3,
+  CheckCircle2,
+  XCircle,
+  CreditCard,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -82,7 +87,7 @@ const ManageAdmins = () => {
           updateAdmin({
             adminId: selectedAdmin.id,
             ...formData,
-          })
+          }),
         ).unwrap();
         toast.success("Admin updated successfully!");
       } else {
@@ -290,17 +295,6 @@ const ManageAdmins = () => {
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none" />
 
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: "#0f172a",
-            color: "#fff",
-            border: "1px solid rgba(255,255,255,0.1)",
-          },
-        }}
-      />
-
       <div className="max-w-6xl mx-auto relative z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
@@ -454,7 +448,7 @@ const ManageAdmins = () => {
                         onChange={(e) => {
                           const value = e.target.value.replace(
                             /[^\d\s+()-]/g,
-                            ""
+                            "",
                           );
                           setFormData({ ...formData, phone: value });
                         }}
@@ -600,7 +594,7 @@ const ManageAdmins = () => {
                                   onClick={() =>
                                     copyToClipboard(
                                       detailAdmin.registrationCode,
-                                      "Registration code"
+                                      "Registration code",
                                     )
                                   }
                                   className="p-1.5 hover:bg-emerald-500/10 rounded-lg transition-colors text-emerald-400"
@@ -629,7 +623,7 @@ const ManageAdmins = () => {
                                   onClick={() =>
                                     copyToClipboard(
                                       `${window.location.origin}?code=${detailAdmin.registrationCode}&openSignup=true`,
-                                      "Registration link"
+                                      "Registration link",
                                     )
                                   }
                                   className="p-1.5 hover:bg-cyan-500/10 rounded-lg transition-colors text-cyan-400 shrink-0"
@@ -645,9 +639,7 @@ const ManageAdmins = () => {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
                       <div className="space-y-6">
-   
                         {detailAdmin.instituteName && (
                           <div>
                             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
@@ -705,7 +697,7 @@ const ManageAdmins = () => {
                                         (detailAdmin.currentStudentCount /
                                           detailAdmin.maxStudents) *
                                           100,
-                                        100
+                                        100,
                                       )}%`,
                                     }}
                                   />
@@ -734,6 +726,142 @@ const ManageAdmins = () => {
                             </div>
                           </div>
                         </div>
+
+                        {detailAdmin.teacherSubscription &&
+                          (() => {
+                            const now = new Date();
+                            const endDate = new Date(
+                              detailAdmin.teacherSubscription.endDate,
+                            );
+                            const isActive = now <= endDate;
+
+                            return (
+                              <div className="mt-4">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                  Teacher Subscription
+                                </h3>
+
+                                <div className="bg-[#0f172a] rounded-xl border border-white/10 p-5 shadow-lg relative overflow-hidden">
+                                  <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                      <span className="text-xs text-slate-500 block mb-1">
+                                        Current Plan
+                                      </span>
+                                      <div className="text-lg font-bold text-white tracking-tight">
+                                        {
+                                          detailAdmin.teacherSubscription
+                                            .planName
+                                        }
+                                      </div>
+                                    </div>
+                                    <span
+                                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                                        isActive
+                                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                          : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                      }`}
+                                    >
+                                      {isActive ? "Active" : "Expired"}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-y-5 gap-x-4 mb-5">
+                                    <div>
+                                      <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
+                                        Start Date
+                                      </span>
+                                      <span className="text-sm font-mono text-slate-300">
+                                        {formatDate(
+                                          detailAdmin.teacherSubscription
+                                            .startDate,
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
+                                        End Date
+                                      </span>
+                                      <span className="text-sm font-mono text-slate-300">
+                                        {formatDate(
+                                          detailAdmin.teacherSubscription
+                                            .endDate,
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    {detailAdmin.teacherSubscription
+                                      .subject && (
+                                      <div>
+                                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
+                                          Subject
+                                        </span>
+                                        <span className="text-sm font-medium text-white">
+                                          {
+                                            detailAdmin.teacherSubscription
+                                              .subject
+                                          }
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {detailAdmin.teacherSubscription
+                                      .classLevel && (
+                                      <div>
+                                        <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">
+                                          Class Level
+                                        </span>
+                                        <span className="text-sm font-medium text-white">
+                                          {
+                                            detailAdmin.teacherSubscription
+                                              .classLevel
+                                          }
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {detailAdmin.teacherSubscription
+                                    .mockTestLimit !== undefined && (
+                                    <div className="pt-4 border-t border-white/5">
+                                      <div className="flex justify-between items-end mb-2">
+                                        <span className="text-xs text-slate-400">
+                                          Mock Tests Generated
+                                        </span>
+                                        <span className="text-xs font-mono text-white">
+                                          <span className="text-indigo-400 font-semibold text-sm">
+                                            {detailAdmin.teacherSubscription
+                                              .mockTestsGenerated || 0}
+                                          </span>
+                                          <span className="text-slate-600 mx-1">
+                                            /
+                                          </span>
+                                          {
+                                            detailAdmin.teacherSubscription
+                                              .mockTestLimit
+                                          }
+                                        </span>
+                                      </div>
+                                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full bg-linear-to-r from-indigo-500 to-purple-500 rounded-full"
+                                          style={{
+                                            width: `${Math.min(
+                                              ((detailAdmin.teacherSubscription
+                                                .mockTestsGenerated || 0) /
+                                                detailAdmin.teacherSubscription
+                                                  .mockTestLimit) *
+                                                100,
+                                              100,
+                                            )}%`,
+                                          }}
+                                        ></div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                       </div>
 
                       <div className="space-y-6">

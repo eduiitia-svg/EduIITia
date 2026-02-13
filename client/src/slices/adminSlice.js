@@ -15,11 +15,11 @@ import {
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { db, auth } from "../config/firebase";
 import axios from "axios";
+import bcrypt from "bcryptjs";
 
 const generateRegistrationCode = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
-
 
 export const submitRegistrationRequest = createAsyncThunk(
   "admin/submitRegistrationRequest",
@@ -29,7 +29,7 @@ export const submitRegistrationRequest = createAsyncThunk(
       const q = query(
         usersRef,
         where("role", "==", "admin"),
-        where("registrationCode", "==", code.toUpperCase())
+        where("registrationCode", "==", code.toUpperCase()),
       );
       const querySnapshot = await getDocs(q);
 
@@ -45,7 +45,7 @@ export const submitRegistrationRequest = createAsyncThunk(
 
       if (maxStudents > 0 && currentCount >= maxStudents) {
         throw new Error(
-          "This institute has reached its maximum student capacity. Registration is currently closed."
+          "This institute has reached its maximum student capacity. Registration is currently closed.",
         );
       }
 
@@ -53,7 +53,7 @@ export const submitRegistrationRequest = createAsyncThunk(
       const existingQuery = query(
         requestsRef,
         where("email", "==", email),
-        where("registrationCode", "==", code.toUpperCase())
+        where("registrationCode", "==", code.toUpperCase()),
       );
       const existingRequests = await getDocs(existingQuery);
 
@@ -134,10 +134,10 @@ export const submitRegistrationRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to submit registration request"
+        error?.message || error || "Failed to submit registration request",
       );
     }
-  }
+  },
 );
 
 export const getRegistrationRequests = createAsyncThunk(
@@ -166,10 +166,10 @@ export const getRegistrationRequests = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to fetch registration requests"
+        error?.message || error || "Failed to fetch registration requests",
       );
     }
-  }
+  },
 );
 
 export const approveRegistrationRequest = createAsyncThunk(
@@ -237,10 +237,10 @@ export const approveRegistrationRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to approve registration request"
+        error?.message || error || "Failed to approve registration request",
       );
     }
-  }
+  },
 );
 
 export const rejectRegistrationRequest = createAsyncThunk(
@@ -306,10 +306,10 @@ export const rejectRegistrationRequest = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to reject registration request"
+        error?.message || error || "Failed to reject registration request",
       );
     }
-  }
+  },
 );
 
 export const verifyRegistrationCode = createAsyncThunk(
@@ -320,7 +320,7 @@ export const verifyRegistrationCode = createAsyncThunk(
       const q = query(
         usersRef,
         where("role", "==", "admin"),
-        where("registrationCode", "==", code.toUpperCase())
+        where("registrationCode", "==", code.toUpperCase()),
       );
       const querySnapshot = await getDocs(q);
 
@@ -336,17 +336,16 @@ export const verifyRegistrationCode = createAsyncThunk(
 
       if (maxStudents > 0 && currentCount >= maxStudents) {
         throw new Error(
-          "This registration code has expired. The institute has reached its maximum student capacity."
+          "This registration code has expired. The institute has reached its maximum student capacity.",
         );
       }
-
 
       if (email) {
         const requestsRef = collection(db, "registrationRequests");
         const requestQuery = query(
           requestsRef,
           where("email", "==", email),
-          where("registrationCode", "==", code.toUpperCase())
+          where("registrationCode", "==", code.toUpperCase()),
         );
         const requestSnapshot = await getDocs(requestQuery);
 
@@ -396,17 +395,17 @@ export const verifyRegistrationCode = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Invalid registration code"
+        error?.message || error || "Invalid registration code",
       );
     }
-  }
+  },
 );
 
 export const createAdmin = createAsyncThunk(
   "admin/createAdmin",
   async (
     { name, email, phone, instituteName, maxStudents },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       if (!name || !email) {
@@ -423,6 +422,7 @@ export const createAdmin = createAsyncThunk(
 
       const randomPassword = Math.random().toString(36).slice(-8);
       const registrationCode = generateRegistrationCode();
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
       const [userCredential] = await Promise.all([
         createUserWithEmailAndPassword(auth, email, randomPassword),
@@ -436,7 +436,7 @@ export const createAdmin = createAsyncThunk(
         email,
         phone: phone || null,
         role: "admin",
-        password: randomPassword,
+        password: hashedPassword,
         college: instituteName || name,
         instituteName: instituteName || name,
         registrationCode: registrationCode,
@@ -578,7 +578,6 @@ export const createAdmin = createAsyncThunk(
           role: "admin",
           instituteName: instituteName || name,
           registrationCode: registrationCode,
-          temp_password: randomPassword,
           createdAt: new Date().toISOString(),
         },
       };
@@ -586,10 +585,10 @@ export const createAdmin = createAsyncThunk(
       return rejectWithValue(
         error?.response?.data?.message ||
           error.message ||
-          "Something went wrong"
+          "Something went wrong",
       );
     }
-  }
+  },
 );
 
 export const getAllAdmins = createAsyncThunk(
@@ -603,6 +602,31 @@ export const getAllAdmins = createAsyncThunk(
       const admins = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+
+        let teacherSubscription = null;
+        if (data.teacherSubscription) {
+          const now = new Date();
+          const endDate = data.teacherSubscription.endDate?.toDate
+            ? data.teacherSubscription.endDate.toDate()
+            : new Date(data.teacherSubscription.endDate);
+          
+          const isActive = now <= endDate;
+          
+          teacherSubscription = {
+            ...data.teacherSubscription,
+            startDate: data.teacherSubscription.startDate?.toDate
+              ? data.teacherSubscription.startDate.toDate().toISOString()
+              : data.teacherSubscription.startDate,
+            endDate: data.teacherSubscription.endDate?.toDate
+              ? data.teacherSubscription.endDate.toDate().toISOString()
+              : data.teacherSubscription.endDate,
+            purchasedAt: data.teacherSubscription.purchasedAt?.toDate
+              ? data.teacherSubscription.purchasedAt.toDate().toISOString()
+              : data.teacherSubscription.purchasedAt,
+            isActive: isActive,
+          };
+        }
+
         admins.push({
           id: doc.id,
           name: data.name,
@@ -611,9 +635,13 @@ export const getAllAdmins = createAsyncThunk(
           instituteName: data.instituteName || data.college || data.name,
           registrationCode: data.registrationCode,
           temp_password: data.password,
+          password: data.password,
           maxStudents: data.maxStudents || 0,
           currentStudentCount: data.currentStudentCount || 0,
-          createdAt: data.createdAt?.toDate().toISOString(),
+          teacherSubscription: teacherSubscription,
+          createdAt: data.createdAt?.toDate
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt || new Date().toISOString(),
         });
       });
 
@@ -624,17 +652,17 @@ export const getAllAdmins = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to fetch admins"
+        error?.message || error || "Failed to fetch admins",
       );
     }
-  }
+  },
 );
 
 export const updateAdmin = createAsyncThunk(
   "admin/updateAdmin",
   async (
     { adminId, name, email, phone, instituteName, maxStudents },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const adminRef = doc(db, "users", adminId);
@@ -668,10 +696,10 @@ export const updateAdmin = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to update admin"
+        error?.message || error || "Failed to update admin",
       );
     }
-  }
+  },
 );
 
 export const deleteAdmin = createAsyncThunk(
@@ -693,10 +721,10 @@ export const deleteAdmin = createAsyncThunk(
       };
     } catch (error) {
       return rejectWithValue(
-        error?.message || error || "Failed to delete admin"
+        error?.message || error || "Failed to delete admin",
       );
     }
-  }
+  },
 );
 
 const adminSlice = createSlice({
@@ -765,7 +793,7 @@ const adminSlice = createSlice({
       })
       .addCase(approveRegistrationRequest.fulfilled, (state, action) => {
         const index = state.registrationRequests.findIndex(
-          (r) => r.id === action.payload.requestId
+          (r) => r.id === action.payload.requestId,
         );
         if (index !== -1) {
           state.registrationRequests[index].status = "approved";
@@ -773,7 +801,7 @@ const adminSlice = createSlice({
       })
       .addCase(rejectRegistrationRequest.fulfilled, (state, action) => {
         const index = state.registrationRequests.findIndex(
-          (r) => r.id === action.payload.requestId
+          (r) => r.id === action.payload.requestId,
         );
         if (index !== -1) {
           state.registrationRequests[index].status = "rejected";
@@ -781,7 +809,7 @@ const adminSlice = createSlice({
       })
       .addCase(updateAdmin.fulfilled, (state, action) => {
         const index = state.admins.findIndex(
-          (a) => a.id === action.payload.data.id
+          (a) => a.id === action.payload.data.id,
         );
         if (index !== -1) {
           state.admins[index] = action.payload.data;
@@ -789,7 +817,7 @@ const adminSlice = createSlice({
       })
       .addCase(deleteAdmin.fulfilled, (state, action) => {
         state.admins = state.admins.filter(
-          (a) => a.id !== action.payload.adminId
+          (a) => a.id !== action.payload.adminId,
         );
       });
   },

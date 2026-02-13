@@ -1,40 +1,33 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
 
-const API_URL = import.meta.env.VITE_API_URL 
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const createCheckout = createAsyncThunk(
   "payment/createCheckout",
   async ({ userId, planId }, { rejectWithValue }) => {
     try {
-      
-      
       const planRef = await getDocs(
-        query(collection(db, "subscriptionPlans"), where("__name__", "==", planId))
+        query(
+          collection(db, "subscriptionPlans"),
+          where("__name__", "==", planId),
+        ),
       );
-      
+
       if (planRef.empty) {
         return rejectWithValue("Plan not found");
       }
-      
+
       const plan = { id: planRef.docs[0].id, ...planRef.docs[0].data() };
-      const amount = Math.round((plan.price || 0) * 100); 
+      const amount = Math.round((plan.price || 0) * 100);
 
-
-      
       const response = await axios.post(`${API_URL}/api/payment/create-order`, {
         userId,
         planId,
         amount,
       });
-
 
       if (!response.data.success) {
         return rejectWithValue(response.data.message);
@@ -54,20 +47,21 @@ export const createCheckout = createAsyncThunk(
       console.error("❌ Checkout error:", error);
       console.error("❌ Error response:", error.response?.data);
       return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to create checkout"
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create checkout",
       );
     }
-  }
+  },
 );
 
 export const verifyPayment = createAsyncThunk(
   "payment/verifyPayment",
   async (
-    { razorpay_payment_id, razorpay_order_id, razorpay_signature, userId },
-    { rejectWithValue }
+    { razorpay_payment_id, razorpay_order_id, razorpay_signature, userId, planId },
+    { rejectWithValue },
   ) => {
     try {
-      
       const response = await axios.post(`${API_URL}/api/payment/verify`, {
         razorpay_payment_id,
         razorpay_order_id,
@@ -79,14 +73,64 @@ export const verifyPayment = createAsyncThunk(
         return rejectWithValue(response.data.message);
       }
 
-      return response.data;
+      const planRef = doc(db, "subscriptionPlans", planId);
+      const planSnap = await getDoc(planRef);
+
+      if (!planSnap.exists()) {
+        return rejectWithValue("Plan not found");
+      }
+
+      const planData = planSnap.data();
+
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        return rejectWithValue("User not found");
+      }
+      
+      const currentSubscriptions = userSnap.data().subscription || [];
+      const updatedSubscriptions = currentSubscriptions.map((sub) => ({
+        ...sub,
+        isActive: false,
+      }));
+
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + planData.duration);
+
+      updatedSubscriptions.push({
+        plan: planId,
+        planName: planData.name,
+        planType: planData.type,
+        subject: planData.subject || "All",
+        subcategory: planData.subcategory || "All",
+        mainCategory: planData.mainCategory || "All", 
+        testLimit: planData.testLimit || 0,
+        price: planData.price,
+        duration: planData.duration,
+        features: planData.features || [],
+        description: planData.description || "",
+        startDate: startDate,
+        endDate: endDate,
+        isActive: true,
+        purchasedAt: new Date(), 
+      });
+
+      await updateDoc(userRef, {
+        subscription: updatedSubscriptions,
+        updatedAt: new Date(), 
+      });
+
+      return {
+        success: true,
+        subscription: updatedSubscriptions[updatedSubscriptions.length - 1],
+      };
     } catch (error) {
-      console.error("Verification error:", error);
-      return rejectWithValue(
-        error.response?.data?.message || error.message || "Payment verification failed"
-      );
+      console.error("❌ Verify payment error:", error);
+      return rejectWithValue(error.message || "Payment verification failed");
     }
-  }
+  },
 );
 
 export const getUserOrders = createAsyncThunk(
@@ -106,7 +150,7 @@ export const getUserOrders = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 const paymentSlice = createSlice({

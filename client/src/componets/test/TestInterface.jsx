@@ -30,6 +30,7 @@ const TestInterface = () => {
     saveAnswerLocally,
     setCurrentQuestionIndex,
   } = useTest();
+
   const { testName } = useSelector((state) => state.test);
 
   const navigate = useNavigate();
@@ -57,6 +58,18 @@ const TestInterface = () => {
       .toString()
       .padStart(2, "0")}`;
   };
+  useEffect(() => {
+    const initializeTest = async () => {
+      if (testId && !hasInitialized.current) {
+        hasInitialized.current = true;
+        setCurrentQuestionIndex(0);
+        getQuestion(testId, 0);
+        setVisitedQuestions(new Set([0]));
+      }
+    };
+
+    initializeTest();
+  }, [testId, getQuestion, setCurrentQuestionIndex]);
 
   useEffect(() => {
     if (timeLimit && timeLeft === 0) {
@@ -71,14 +84,14 @@ const TestInterface = () => {
       const answered = new Set(
         Object.keys(reduxAnswers)
           .map(Number)
-          .filter((idx) => reduxAnswers[idx]?.selectedAnswer)
+          .filter((idx) => reduxAnswers[idx]?.selectedAnswer),
       );
       setAnsweredQuestions(answered);
 
       const marked = new Set(
         Object.keys(reduxAnswers)
           .map(Number)
-          .filter((idx) => reduxAnswers[idx]?.status === "review")
+          .filter((idx) => reduxAnswers[idx]?.status === "review"),
       );
       setMarkedQuestions(marked);
     }
@@ -198,8 +211,8 @@ const TestInterface = () => {
           status: isNowMarked
             ? "review"
             : hasAnswer
-            ? "answered"
-            : "not_visited",
+              ? "answered"
+              : "not_visited",
         });
       } catch (err) {
         console.error("Failed to update mark status:", err);
@@ -227,13 +240,10 @@ const TestInterface = () => {
   const handlePopupClose = () => {
     setShowSuccessPopup(false);
     navigate("/dashboard");
-  };``
+  };
+  ``;
 
   const handleSubmitTest = useCallback(() => {
-    if (showSuccessPopup) {
-      handlePopupClose();
-      return;
-    }
     if (markedQuestions.size > 0) {
       toast(
         (t) => (
@@ -291,24 +301,32 @@ const TestInterface = () => {
             maxWidth: "500px",
             padding: "16px",
           },
-        }
+        },
       );
       return;
     }
 
     setShowSubmitModal(true);
-  }, [markedQuestions, setShowSubmitModal, showSuccessPopup, handlePopupClose]);
+  }, [markedQuestions, setShowSubmitModal]);
   const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
+    setShowSubmitModal(false);
+
     try {
       await submitTest(testId);
-      setShowSubmitModal(false);
-      setShowSuccessPopup(true);
-      toast.success("Test submitted successfully!");
+      toast.success(
+        "Test submitted successfully! Redirecting to dashboard...",
+        {
+          duration: 1500,
+        },
+      );
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
     } catch (err) {
       console.error("Error submitting test:", err);
       toast.error("Failed to submit test. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -612,7 +630,7 @@ const TestInterface = () => {
                   className="nav-btn next"
                   onClick={() =>
                     setCurrentIndex((prev) =>
-                      Math.min((totalQuestions || 15) - 1, prev + 1)
+                      Math.min((totalQuestions || 15) - 1, prev + 1),
                     )
                   }
                   disabled={currentIndex === (totalQuestions || 15) - 1}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import Sidebar from "./SideBar";
@@ -10,9 +10,20 @@ import CategoryManagement from "./CategoryManagement";
 import RegistrationRequestsDashboard from "./RegistrationRequestsDashboard";
 import StudyMaterialManagement from "./StudyMaterialManagement";
 import TestimonialManagement from "./TestimonialManagement";
+import FeatureGate from "../FeatureGate";
+import { getTeacherSubscriptionStatus } from "../../slices/subscriptionSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 const AdminDashboard = () => {
   const location = useLocation();
+  const dispatch = useDispatch()
+  const {user} = useSelector((state) => state.auth)
+
+  useEffect(() => {
+    if (user?.uid && user?.role === "admin") {
+      dispatch(getTeacherSubscriptionStatus(user.uid));
+    }
+  }, [dispatch, user?.uid, user?.role]);
 
   const noisePattern = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E")`;
 
@@ -48,39 +59,88 @@ const AdminDashboard = () => {
                 path="upload"
                 element={
                   <PageWrapper>
-                    <UploadCSV />
+                    <FeatureGate
+                      featureName="Upload Questions"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <UploadCSV />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />
+
               <Route
                 path="papers"
                 element={
                   <PageWrapper>
-                    <QuestionPapers />
+                    <FeatureGate
+                      featureName="Question Papers"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <QuestionPapers />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />
+
               <Route
                 path="study-materials"
                 element={
                   <PageWrapper>
-                    <StudyMaterialManagement />
+                    <FeatureGate
+                      featureName="Study Material"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <StudyMaterialManagement />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />
+
               <Route
                 path="attempts"
                 element={
                   <PageWrapper>
-                    <TestAttempts />
+                    <FeatureGate
+                      featureName="Test Attempts"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <TestAttempts />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />
+
               <Route
                 path="categories"
                 element={
                   <PageWrapper>
-                    <CategoryManagement />
+                    <FeatureGate
+                      featureName="Categories"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <CategoryManagement />
+                    </FeatureGate>
+                  </PageWrapper>
+                }
+              />
+
+              <Route
+                path="testimonials"
+                element={
+                  <PageWrapper>
+                    <FeatureGate
+                      featureName="Add Testimonials"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <TestimonialManagement />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />
@@ -89,14 +149,6 @@ const AdminDashboard = () => {
                 element={
                   <PageWrapper>
                     <RegistrationRequestsDashboard />
-                  </PageWrapper>
-                }
-              />
-              <Route
-                path="testimonials"
-                element={
-                  <PageWrapper>
-                    <TestimonialManagement />
                   </PageWrapper>
                 }
               />

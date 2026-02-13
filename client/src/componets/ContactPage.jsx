@@ -132,18 +132,7 @@ const ContactPage = () => {
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-teal-500/20 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
       
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: "#1e293b",
-            color: "#fff",
-            border: "1px solid rgba(255,255,255,0.1)",
-            fontSize: "14px",
-          },
-        }}
-      />
-
+     
       <div className="max-w-6xl w-full grid lg:grid-cols-5 shadow-2xl rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0f1115] relative z-10">
         
         <motion.div

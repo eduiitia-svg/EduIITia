@@ -27,28 +27,136 @@ import {
 } from "../../slices/categorySlice";
 import toast from "react-hot-toast";
 
+const EXAM_TYPE_OPTIONS = {
+  school: ["CBSE Board", "ICSE Board", "State Board"],
+  entrance: ["Engineering Entrance", "Medical Entrance", "Law Entrance"],
+  recruitment: ["Government Job", "Banking", "Railway", "Police"],
+};
 const CategoryManagement = () => {
   const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const { categories, loading } = useSelector((state) => state.category);
 
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [expandedSubjects, setExpandedSubjects] = useState({});
-
   const [newCategory, setNewCategory] = useState({
-    name: "",
-    type: "Competitive",
-    subjects: [{ name: "", subcategories: [] }],
+    name: user?.teacherSubscription?.classLevel || "",
+    type: user?.teacherSubscription?.examType || "",
+    subjects: [
+      {
+        name: user?.teacherSubscription?.subject || "",
+        subcategories:
+          user?.teacherSubscription?.subcategory &&
+          user.teacherSubscription.subcategory !== "All"
+            ? [user.teacherSubscription.subcategory]
+            : [],
+      },
+    ],
     icon: "BookOpen",
+    mainCategory: user?.teacherSubscription?.mainCategory || "", 
   });
-
   const [editForm, setEditForm] = useState({
     name: "",
     type: "",
     subjects: [],
     icon: "",
   });
+  const [allowedExamTypes, setAllowedExamTypes] = useState(null);
+  const [allowedSubjects, setAllowedSubjects] = useState(null);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
+
+  const isSubjectAllowed = (subjectName) => {
+    if (allowedSubjects === null) return true;
+    return allowedSubjects.includes(subjectName.trim());
+  };
+
+  useEffect(() => {
+    if (allowedExamTypes !== null && allowedExamTypes.length > 0) {
+      setNewCategory((prev) => ({
+        ...prev,
+        type: allowedExamTypes[0],
+      }));
+    }
+
+    if (user?.teacherSubscription?.classLevel) {
+      setNewCategory((prev) => ({
+        ...prev,
+        name: user.teacherSubscription.classLevel,
+      }));
+    }
+    if (
+      user?.teacherSubscription?.subject &&
+      user.teacherSubscription.subject !== "All"
+    ) {
+      setNewCategory((prev) => ({
+        ...prev,
+        subjects: [
+          {
+            name: user.teacherSubscription.subject,
+            subcategories:
+              user.teacherSubscription.subcategory &&
+              user.teacherSubscription.subcategory !== "All"
+                ? [user.teacherSubscription.subcategory]
+                : [],
+          },
+        ],
+      }));
+    }
+  }, [
+    allowedExamTypes,
+    user?.teacherSubscription?.classLevel,
+    user?.teacherSubscription?.subject,
+    user?.teacherSubscription?.subcategory,
+  ]);
+
+  useEffect(() => {
+    const fetchAllowedPermissions = async () => {
+      if (!user) {
+        setLoadingPermissions(false);
+        return;
+      }
+
+      try {
+        if (user.role === "superadmin") {
+          setAllowedExamTypes(null);
+          setAllowedSubjects(null);
+          setLoadingPermissions(false);
+          return;
+        }
+
+        if (user.role === "admin" && user.teacherSubscription) {
+          const subscription = user.teacherSubscription;
+          if (subscription.isActive) {
+            setAllowedExamTypes(
+              subscription.examType ? [subscription.examType] : null,
+            );
+
+            setAllowedSubjects(
+              subscription.subject && subscription.subject !== "All"
+                ? [subscription.subject]
+                : null,
+            );
+          } else {
+            setAllowedExamTypes(null);
+            setAllowedSubjects(null);
+          }
+        } else {
+          setAllowedExamTypes(null);
+          setAllowedSubjects(null);
+        }
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+        setAllowedExamTypes(null);
+        setAllowedSubjects(null);
+      } finally {
+        setLoadingPermissions(false);
+      }
+    };
+
+    fetchAllowedPermissions();
+  }, [user]);
 
   useEffect(() => {
     dispatch(getAllCategories());
@@ -62,9 +170,10 @@ const CategoryManagement = () => {
         subjects: editingCategory.subjects.map((subj) =>
           typeof subj === "string"
             ? { name: subj, subcategories: [] }
-            : { ...subj }
+            : { ...subj },
         ),
         icon: editingCategory.icon,
+        mainCategory: editingCategory.mainCategory || "",
       });
     }
   }, [editingCategory]);
@@ -129,7 +238,7 @@ const CategoryManagement = () => {
     const updated = editForm.subjects.map((subj, idx) =>
       idx === subjectIndex
         ? { ...subj, subcategories: [...subj.subcategories, ""] }
-        : { ...subj, subcategories: [...subj.subcategories] }
+        : { ...subj, subcategories: [...subj.subcategories] },
     );
     setEditForm({ ...editForm, subjects: updated });
   };
@@ -154,8 +263,9 @@ const CategoryManagement = () => {
       return;
     }
 
+
     const validSubjects = newCategory.subjects.filter(
-      (s) => s.name.trim() !== ""
+      (s) => s.name.trim() !== "",
     );
     if (validSubjects.length === 0) {
       setMessage({ type: "error", text: "At least one subject is required" });
@@ -168,17 +278,42 @@ const CategoryManagement = () => {
     }));
 
     try {
+      let mainCategory = user?.teacherSubscription?.mainCategory;
+
+      if (!mainCategory || mainCategory === "All") {
+        if (!newCategory.mainCategory || newCategory.mainCategory === "") {
+          setMessage({ type: "error", text: "Please select a main category" });
+          return;
+        }
+        mainCategory = newCategory.mainCategory;
+      }
+
       await dispatch(
-        createCategory({ ...newCategory, subjects: cleanedSubjects })
+        createCategory({
+          ...newCategory,
+          subjects: cleanedSubjects,
+          mainCategory: mainCategory,
+        }),
       ).unwrap();
+
       setMessage({ type: "success", text: "Category created successfully!" });
       toast.success("Category created successfully!");
       setShowAddCategory(false);
       setNewCategory({
-        name: "",
-        type: "Competitive",
-        subjects: [{ name: "", subcategories: [] }],
+        name: user?.teacherSubscription?.classLevel || "",
+        type: user?.teacherSubscription?.examType || "Competitive",
+        subjects: [
+          {
+            name: user?.teacherSubscription?.subject || "",
+            subcategories:
+              user?.teacherSubscription?.subcategory &&
+              user.teacherSubscription.subcategory !== "All"
+                ? [user.teacherSubscription.subcategory]
+                : [],
+          },
+        ],
         icon: "BookOpen",
+        mainCategory: user?.teacherSubscription?.mainCategory || "",
       });
     } catch (error) {
       setMessage({ type: "error", text: error });
@@ -189,6 +324,11 @@ const CategoryManagement = () => {
   const handleUpdateCategory = async () => {
     if (!editForm.name.trim()) {
       setMessage({ type: "error", text: "Category name is required" });
+      return;
+    }
+
+    if (!editForm.mainCategory || editForm.mainCategory === "") {
+      setMessage({ type: "error", text: "Main category is required" });
       return;
     }
 
@@ -207,8 +347,12 @@ const CategoryManagement = () => {
       await dispatch(
         updateCategory({
           categoryId: editingCategory.id,
-          updates: { ...editForm, subjects: cleanedSubjects },
-        })
+          updates: {
+            ...editForm,
+            subjects: cleanedSubjects,
+            mainCategory: editForm.mainCategory,
+          },
+        }),
       ).unwrap();
       setMessage({ type: "success", text: "Category updated successfully!" });
       toast.success("Category updated successfully!");
@@ -222,7 +366,7 @@ const CategoryManagement = () => {
   const handleDeleteCategory = async (categoryId) => {
     if (
       !window.confirm(
-        "Are you sure you want to delete this category? This action cannot be undone if there are no tests using this category."
+        "Are you sure you want to delete this category? This action cannot be undone if there are no tests using this category.",
       )
     ) {
       return;
@@ -255,8 +399,14 @@ const CategoryManagement = () => {
     { name: "Target", component: Target },
     { name: "Zap", component: Zap },
   ];
-  const typeOptions = ["Competitive", "School", "Quiz"];
 
+  const allTypeOptions = ["Competitive", "School", "Quiz"];
+  const typeOptions =
+    user?.role === "superadmin"
+      ? allTypeOptions
+      : allowedExamTypes !== null
+        ? allowedExamTypes
+        : allTypeOptions;
   const toggleSubject = (categoryId, subjectIndex) => {
     const key = `${categoryId}-${subjectIndex}`;
     setExpandedSubjects((prev) => ({
@@ -290,13 +440,34 @@ const CategoryManagement = () => {
         className="border border-gray-300 dark:border-white/10 rounded-xl p-4 bg-gray-100 dark:bg-black/20"
       >
         <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={subject.name}
-            onChange={(e) => handlers.onSubjectChange(index, e.target.value)}
-            placeholder="e.g., Physics, Chemistry, Mathematics"
-            className="flex-1 bg-gray-50 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 placeholder:text-gray-500"
-          />
+          <div className="flex-1">
+            <input
+              type="text"
+              value={subject.name}
+              onChange={(e) => handlers.onSubjectChange(index, e.target.value)}
+              onBlur={(e) => {
+                const value = e.target.value.trim();
+                if (value !== "" && !isSubjectAllowed(value)) {
+                  toast.error(
+                    `Subject "${value}" is not allowed. Your subscription only allows: ${allowedSubjects.join(", ")}`,
+                  );
+
+                  handlers.onSubjectChange(index, "");
+                }
+              }}
+              placeholder={
+                allowedSubjects !== null
+                  ? `Allowed: ${allowedSubjects.join(", ")}`
+                  : "e.g., Physics, Chemistry, Mathematics"
+              }
+              className="w-full bg-gray-50 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 placeholder:text-gray-500"
+            />
+            {allowedSubjects !== null && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                Your subscription allows: {allowedSubjects.join(", ")}
+              </p>
+            )}
+          </div>
           {handlers.subjects.length > 1 && (
             <button
               onClick={() => handlers.onRemoveSubject(index)}
@@ -432,6 +603,47 @@ const CategoryManagement = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
+                    Main Category *
+                  </label>
+                  <select
+                    value={
+                      newCategory.mainCategory ||
+                      user?.teacherSubscription?.mainCategory ||
+                      ""
+                    }
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        mainCategory: e.target.value,
+                      })
+                    }
+                    disabled={
+                      user?.teacherSubscription?.mainCategory &&
+                      user.teacherSubscription.mainCategory !== "All"
+                    }
+                    className={`w-full bg-gray-100 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 ${
+                      user?.teacherSubscription?.mainCategory &&
+                      user.teacherSubscription.mainCategory !== "All"
+                        ? "cursor-not-allowed opacity-75"
+                        : ""
+                    }`}
+                    required
+                  >
+                    <option value="">Select Main Category</option>
+                    <option value="school">School</option>
+                    <option value="entrance">Entrance</option>
+                    <option value="recruitment">Recruitment</option>
+                  </select>
+                  {user?.teacherSubscription?.mainCategory &&
+                    user.teacherSubscription.mainCategory !== "All" && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                        🔒 Locked to your subscription:{" "}
+                        {user.teacherSubscription.mainCategory}
+                      </p>
+                    )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
                     Category Name
                   </label>
                   <input
@@ -440,35 +652,86 @@ const CategoryManagement = () => {
                     onChange={(e) =>
                       setNewCategory({ ...newCategory, name: e.target.value })
                     }
-                    placeholder="e.g., Class 11, GATE, NEET"
-                    className="w-full bg-gray-100 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 placeholder:text-gray-500"
+                    placeholder="e.g., JEE Mains, NEET, SSC CGL"
+                    className={`w-full bg-gray-100 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 placeholder:text-gray-500`}
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                    Category Type
-                  </label>
-                  <select
-                    value={newCategory.type}
-                    onChange={(e) =>
-                      setNewCategory({ ...newCategory, type: e.target.value })
-                    }
-                    className="w-full bg-gray-100 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50"
-                  >
-                    {typeOptions.map((type) => (
-                      <option
-                        key={type}
-                        value={type}
-                        className="bg-white dark:bg-gray-900"
-                      >
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
+                  Exam Type
+                </label>
+                <select
+                  value={newCategory.type}
+                  onChange={(e) =>
+                    setNewCategory({ ...newCategory, type: e.target.value })
+                  }
+                  disabled={allowedExamTypes !== null}
+                  className={`w-full bg-gray-100 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 ${
+                    allowedExamTypes !== null
+                      ? "cursor-not-allowed opacity-75"
+                      : ""
+                  }`}
+                >
+                  <option value="">Select Exam Type</option>
+                  {typeOptions.map((type) => (
+                    <option
+                      key={type}
+                      value={type}
+                      className="bg-white dark:bg-gray-900"
+                    >
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                {allowedExamTypes !== null && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                    🔒 Locked to your subscription exam type
+                  </p>
+                )}
               </div>
 
+              {(allowedSubjects !== null ||
+                user?.teacherSubscription?.classLevel) && (
+                <div className="col-span-2 p-3 bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                    📋 Your Subscription Limits:
+                  </p>
+                  {user?.teacherSubscription?.examType && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-300">
+                      • Exam Type: {user.teacherSubscription.examType}
+                    </p>
+                  )}
+                  {user?.teacherSubscription?.classLevel && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-300">
+                      • Class Level: {user.teacherSubscription.classLevel}
+                    </p>
+                  )}
+                  {allowedSubjects && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-300">
+                      • Allowed Subject(s): {allowedSubjects.join(", ")}
+                    </p>
+                  )}
+                  {user?.teacherSubscription?.subcategory &&
+                    user.teacherSubscription.subcategory !== "All" && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-300">
+                        • Subcategory: {user.teacherSubscription.subcategory}
+                      </p>
+                    )}
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Note: Category name is{" "}
+                    {user?.teacherSubscription?.classLevel
+                      ? "locked to your class level"
+                      : "customizable"}
+                    , but subjects
+                    {user?.teacherSubscription?.subcategory &&
+                    user.teacherSubscription.subcategory !== "All"
+                      ? " and subcategories are"
+                      : " are"}{" "}
+                    restricted to your subscription.
+                  </p>
+                </div>
+              )}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
                   Icon
@@ -507,7 +770,7 @@ const CategoryManagement = () => {
 
                 <div className="space-y-3">
                   {newCategory.subjects.map((subject, index) =>
-                    renderSubjectForm(subject, index, false)
+                    renderSubjectForm(subject, index, false),
                   )}
                 </div>
               </div>
@@ -517,9 +780,19 @@ const CategoryManagement = () => {
                   onClick={() => {
                     setShowAddCategory(false);
                     setNewCategory({
-                      name: "",
-                      type: "Competitive",
-                      subjects: [{ name: "", subcategories: [] }],
+                      name: user?.teacherSubscription?.classLevel || "",
+                      type:
+                        user?.teacherSubscription?.examType || "Competitive",
+                      subjects: [
+                        {
+                          name: user?.teacherSubscription?.subject || "",
+                          subcategories:
+                            user?.teacherSubscription?.subcategory &&
+                            user.teacherSubscription.subcategory !== "All"
+                              ? [user.teacherSubscription.subcategory]
+                              : [],
+                        },
+                      ],
                       icon: "BookOpen",
                     });
                   }}
@@ -578,6 +851,48 @@ const CategoryManagement = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
+                      Main Category *
+                    </label>
+                    <select
+                      value={editForm.mainCategory || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          mainCategory: e.target.value,
+                        })
+                      }
+                      disabled={
+                        user?.role === "admin" &&
+                        user?.teacherSubscription?.mainCategory &&
+                        user.teacherSubscription.mainCategory !== "All"
+                      }
+                      className={`w-full bg-gray-100 dark:bg-black/30 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500/50 ${
+                        user?.role === "admin" &&
+                        user?.teacherSubscription?.mainCategory &&
+                        user.teacherSubscription.mainCategory !== "All"
+                          ? "cursor-not-allowed opacity-75"
+                          : ""
+                      }`}
+                      required
+                    >
+                      <option value="">Select Main Category</option>
+                      <option value="school">School</option>
+                      <option value="entrance">Entrance</option>
+                      <option value="recruitment">Recruitment</option>
+                    </select>
+                    {user?.role === "admin" &&
+                      user?.teacherSubscription?.mainCategory &&
+                      user.teacherSubscription.mainCategory !== "All" && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                          🔒 Locked to subscription:{" "}
+                          {user.teacherSubscription.mainCategory}
+                        </p>
+                      )}
+                  </div>
+
+                  {/* Category Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
                       Category Name
                     </label>
                     <input
@@ -590,9 +905,9 @@ const CategoryManagement = () => {
                     />
                   </div>
 
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
-                      Category Type
+                      Exam Type
                     </label>
                     <select
                       value={editForm.type}
@@ -650,7 +965,7 @@ const CategoryManagement = () => {
 
                   <div className="space-y-3">
                     {editForm.subjects.map((subject, index) =>
-                      renderSubjectForm(subject, index, true)
+                      renderSubjectForm(subject, index, true),
                     )}
                   </div>
                 </div>
@@ -702,7 +1017,7 @@ const CategoryManagement = () => {
               const normalizedSubjects = category.subjects.map((subj) =>
                 typeof subj === "string"
                   ? { name: subj, subcategories: [] }
-                  : subj
+                  : subj,
               );
 
               return (
@@ -797,7 +1112,7 @@ const CategoryManagement = () => {
                                         <ChevronRight size={12} />
                                         {subcat}
                                       </span>
-                                    )
+                                    ),
                                   )}
                                 </motion.div>
                               )}
