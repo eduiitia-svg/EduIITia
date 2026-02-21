@@ -63,7 +63,6 @@ const Sidebar = () => {
       label: "Dashboard",
       icon: <Home size={20} />,
       featureName: "Dashboard",
-      alwaysAccessible: true,
     },
     {
       path: "/admin/upload",
@@ -100,7 +99,6 @@ const Sidebar = () => {
       label: "Approve/Reject Students",
       icon: <CloudCheck size={20} />,
       featureName: "Approve/Reject Students",
-      alwaysAccessible: true,
     },
     {
       path: "/admin/testimonials",

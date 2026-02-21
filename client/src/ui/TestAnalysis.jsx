@@ -7,8 +7,17 @@ import {
   Award,
   ArrowLeft,
   Percent,
+  Filter,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  BookOpen,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -25,14 +34,38 @@ const TestAnalysis = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const questionsPerPage = 5;
+  const [filter, setFilter] = useState("all"); 
+  const [showExplanations, setShowExplanations] = useState(true);
+  const [expandedQuestions, setExpandedQuestions] = useState(new Set());
+  const [viewingImage, setViewingImage] = useState(null);
 
   const { currentAttempt, loading } = useSelector((state) => state.dashboard);
-
   useEffect(() => {
     if (attemptId) {
       dispatch(getTestAttemptById(attemptId));
     }
   }, [attemptId, dispatch]);
+
+  const toggleQuestion = (index) => {
+    const newExpanded = new Set(expandedQuestions);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedQuestions(newExpanded);
+  };
+
+  const toggleAllQuestions = () => {
+    if (expandedQuestions.size === filteredQuestions.length) {
+      setExpandedQuestions(new Set());
+    } else {
+      const allIndices = filteredQuestions.map((_, idx) => 
+        currentAttempt.questions.indexOf(filteredQuestions[idx])
+      );
+      setExpandedQuestions(new Set(allIndices));
+    }
+  };
 
   if (loading || !currentAttempt) {
     return (
@@ -61,13 +94,20 @@ const TestAnalysis = () => {
     );
   }
 
-  const totalPages = Math.ceil(
-    (currentAttempt.questions?.length || 0) / questionsPerPage
-  );
+  // Filter questions based on selected filter
+  const filteredQuestions = currentAttempt.questions.filter((q) => {
+    if (filter === "all") return true;
+    if (filter === "correct") return q.isCorrect;
+    if (filter === "incorrect") return q.isAttempted && !q.isCorrect;
+    if (filter === "skipped") return !q.isAttempted;
+    return true;
+  });
+  
+
+  const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
   const startIndex = (currentPage - 1) * questionsPerPage;
   const endIndex = startIndex + questionsPerPage;
-  const currentQuestions =
-    currentAttempt.questions?.slice(startIndex, endIndex) || [];
+  const currentQuestions = filteredQuestions.slice(startIndex, endIndex);
 
   const getScoreColor = (score) => {
     if (darkMode) {
@@ -333,6 +373,133 @@ const TestAnalysis = () => {
           </div>
         </motion.div>
 
+        {/* Filters and Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className={`${
+            darkMode
+              ? "bg-slate-900/40 border-slate-800"
+              : "bg-white border-gray-200 shadow-sm"
+          } border rounded-2xl p-6 backdrop-blur-sm mb-8`}
+        >
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Filter
+                className={`w-5 h-5 ${
+                  darkMode ? "text-slate-400" : "text-gray-600"
+                }`}
+              />
+              <button
+                onClick={() => {
+                  setFilter("all");
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  filter === "all"
+                    ? darkMode
+                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                      : "bg-cyan-100 text-cyan-700 border border-cyan-200"
+                    : darkMode
+                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                }`}
+              >
+                All ({currentAttempt.totalQuestions})
+              </button>
+              <button
+                onClick={() => {
+                  setFilter("correct");
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  filter === "correct"
+                    ? darkMode
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                    : darkMode
+                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                }`}
+              >
+                Correct ({currentAttempt.correctAnswers})
+              </button>
+              <button
+                onClick={() => {
+                  setFilter("incorrect");
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  filter === "incorrect"
+                    ? darkMode
+                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                      : "bg-red-100 text-red-700 border border-red-200"
+                    : darkMode
+                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                }`}
+              >
+                Incorrect ({currentAttempt.incorrectAnswers})
+              </button>
+              <button
+                onClick={() => {
+                  setFilter("skipped");
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  filter === "skipped"
+                    ? darkMode
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      : "bg-amber-100 text-amber-700 border border-amber-200"
+                    : darkMode
+                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                }`}
+              >
+                Skipped ({currentAttempt.skippedAnswers})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowExplanations(!showExplanations)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  darkMode
+                    ? "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+                }`}
+              >
+                {showExplanations ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+                {showExplanations ? "Hide" : "Show"} Explanations
+              </button>
+
+              <button
+                onClick={toggleAllQuestions}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  darkMode
+                    ? "bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700"
+                    : "bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200"
+                }`}
+              >
+                {expandedQuestions.size === filteredQuestions.length ? (
+                  <>
+                    <ChevronUp className="w-4 h-4" /> Collapse All
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4" /> Expand All
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -352,217 +519,381 @@ const TestAnalysis = () => {
               }`}
             >
               Showing {startIndex + 1}-
-              {Math.min(endIndex, currentAttempt.questions?.length || 0)} of{" "}
-              {currentAttempt.questions?.length || 0}
+              {Math.min(endIndex, filteredQuestions.length)} of{" "}
+              {filteredQuestions.length}
             </span>
           </div>
 
-          <div className="space-y-6">
-            {currentQuestions.map((question, index) => {
-              const globalIndex = startIndex + index;
-              return (
-                <motion.div
-                  key={globalIndex}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`${
-                    darkMode ? "bg-slate-900/40" : "bg-white shadow-sm"
-                  } border rounded-2xl p-6 backdrop-blur-sm transition-all hover:shadow-lg ${
-                    !question.isAttempted
-                      ? darkMode
-                        ? "border-yellow-500/20 hover:border-yellow-500/40"
-                        : "border-yellow-200 hover:border-yellow-300"
-                      : question.isCorrect
-                      ? darkMode
-                        ? "border-emerald-500/20 hover:border-emerald-500/40"
-                        : "border-emerald-200 hover:border-emerald-300"
-                      : darkMode
-                      ? "border-red-500/20 hover:border-red-500/40"
-                      : "border-red-200 hover:border-red-300"
-                  }`}
-                >
-                  <div className="flex justify-between items-start gap-4 mb-5">
-                    <div className="flex-1">
-                      <span
-                        className={`${
-                          darkMode ? "text-emerald-500" : "text-emerald-600"
-                        } font-mono text-sm mb-2 block`}
-                      >
-                        QUESTION {String(globalIndex + 1).padStart(2, "0")}
-                      </span>
-                      <p
-                        className={`${
-                          darkMode ? "text-slate-200" : "text-gray-900"
-                        } font-medium leading-relaxed text-lg`}
-                      >
-                        {question.questionText}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-3 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 whitespace-nowrap ${
-                        !question.isAttempted
-                          ? darkMode
-                            ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          : question.isCorrect
-                          ? darkMode
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : darkMode
-                          ? "bg-red-500/10 text-red-400 border-red-500/20"
-                          : "bg-red-50 text-red-700 border-red-200"
-                      }`}
-                    >
-                      {!question.isAttempted ? (
-                        <>
-                          <XCircle size={16} /> Skipped
-                        </>
-                      ) : question.isCorrect ? (
-                        <>
-                          <CheckCircle size={16} /> Correct
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={16} /> Wrong
-                        </>
-                      )}
-                    </span>
-                  </div>
+          {filteredQuestions.length === 0 ? (
+            <div
+              className={`text-center py-20 rounded-2xl border ${
+                darkMode
+                  ? "bg-slate-900/30 border-slate-800"
+                  : "bg-white border-gray-200 shadow-sm"
+              }`}
+            >
+              <AlertCircle
+                className={`w-16 h-16 mx-auto mb-4 ${
+                  darkMode ? "text-slate-600" : "text-gray-400"
+                }`}
+              />
+              <p
+                className={`text-lg ${
+                  darkMode ? "text-slate-400" : "text-gray-600"
+                }`}
+              >
+                No questions match this filter
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {currentQuestions.map((question, index) => {
+                const originalIndex = currentAttempt.questions.indexOf(question);
+                const isExpanded = expandedQuestions.has(originalIndex);
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                    <div
-                      className={`p-4 rounded-xl border transition-all ${
-                        !question.isAttempted
-                          ? darkMode
-                            ? "bg-yellow-500/5 border-yellow-500/20"
-                            : "bg-yellow-50 border-yellow-200"
-                          : question.isCorrect
-                          ? darkMode
-                            ? "bg-emerald-500/5 border-emerald-500/20"
-                            : "bg-emerald-50 border-emerald-200"
-                          : darkMode
-                          ? "bg-red-500/5 border-red-500/20"
-                          : "bg-red-50 border-red-200"
-                      }`}
+                return (
+                  <motion.div
+                    key={originalIndex}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`${
+                      darkMode ? "bg-slate-900/40" : "bg-white shadow-sm"
+                    } border rounded-2xl backdrop-blur-sm transition-all ${
+                      !question.isAttempted
+                        ? darkMode
+                          ? "border-yellow-500/20 hover:border-yellow-500/40"
+                          : "border-yellow-200 hover:border-yellow-300"
+                        : question.isCorrect
+                        ? darkMode
+                          ? "border-emerald-500/20 hover:border-emerald-500/40"
+                          : "border-emerald-200 hover:border-emerald-300"
+                        : darkMode
+                        ? "border-red-500/20 hover:border-red-500/40"
+                        : "border-red-200 hover:border-red-300"
+                    }`}
+                  >
+                    {/* Question Header - Clickable */}
+                    <button
+                      onClick={() => toggleQuestion(originalIndex)}
+                      className="w-full p-6 text-left"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
-                          <p
-                            className={`text-xs ${
-                              darkMode ? "text-slate-400" : "text-gray-600"
-                            } mb-2 uppercase tracking-wider font-semibold`}
+                          <span
+                            className={`${
+                              darkMode ? "text-emerald-500" : "text-emerald-600"
+                            } font-mono text-sm mb-2 block`}
                           >
-                            Your Answer
-                          </p>
+                            QUESTION {String(originalIndex + 1).padStart(2, "0")}
+                          </span>
                           <p
-                            className={`text-base font-medium ${
-                              !question.isAttempted
-                                ? darkMode
-                                  ? "text-yellow-300"
-                                  : "text-yellow-700"
-                                : question.isCorrect
-                                ? darkMode
-                                  ? "text-emerald-300"
-                                  : "text-emerald-700"
-                                : darkMode
-                                ? "text-red-300"
-                                : "text-red-700"
-                            }`}
+                            className={`${
+                              darkMode ? "text-slate-200" : "text-gray-900"
+                            } font-medium leading-relaxed text-lg`}
                           >
-                            {!question.isAttempted
-                              ? "Not Attempted"
-                              : question.selectedAnswer || "Not Answered"}
+                            {question.questionText}
                           </p>
-                        </div>
-                        {!question.isAttempted ? (
-                          <XCircle
-                            size={20}
-                            className={
-                              darkMode ? "text-yellow-400" : "text-yellow-600"
-                            }
-                          />
-                        ) : (
-                          !question.isCorrect && (
-                            <XCircle
-                              size={20}
-                              className={darkMode ? "text-red-400" : "text-red-600"}
-                            />
-                          )
-                        )}
-                      </div>
-                    </div>
+                          
+                          {/* Badges */}
+                          <div className="flex flex-wrap items-center gap-3 mt-3">
+                            <span
+                              className={`px-3 py-1.5 rounded-full border text-sm font-semibold flex items-center gap-2 ${
+                                !question.isAttempted
+                                  ? darkMode
+                                    ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                    : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                  : question.isCorrect
+                                  ? darkMode
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : darkMode
+                                  ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                  : "bg-red-50 text-red-700 border-red-200"
+                              }`}
+                            >
+                              {!question.isAttempted ? (
+                                <>
+                                  <AlertCircle size={16} /> Skipped
+                                </>
+                              ) : question.isCorrect ? (
+                                <>
+                                  <CheckCircle size={16} /> Correct
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={16} /> Incorrect
+                                </>
+                              )}
+                            </span>
 
-                    <div
-                      className={`p-4 rounded-xl ${
-                        darkMode
-                          ? "bg-emerald-500/5 border-emerald-500/20"
-                          : "bg-emerald-50 border-emerald-200"
-                      } border`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <p
-                            className={`text-xs ${
-                              darkMode
-                                ? "text-emerald-400/80"
-                                : "text-emerald-700"
-                            } mb-2 uppercase tracking-wider font-semibold`}
-                          >
-                            Correct Answer
-                          </p>
-                          <p
-                            className={`text-base font-medium ${
-                              darkMode ? "text-emerald-300" : "text-emerald-700"
-                            }`}
-                          >
-                            {question.correctAnswer}
-                          </p>
+                            {question.questionLevel && (
+                              <span
+                                className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                                  question.questionLevel === "Easy"
+                                    ? darkMode
+                                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                      : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : question.questionLevel === "Medium"
+                                    ? darkMode
+                                      ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                                      : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                                    : darkMode
+                                    ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                    : "bg-red-50 text-red-700 border border-red-200"
+                                }`}
+                              >
+                                {question.questionLevel}
+                              </span>
+                            )}
+
+                            {question.images && question.images.length > 0 && (
+                              <span
+                                className={`flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full ${
+                                  darkMode
+                                    ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                    : "bg-purple-50 text-purple-700 border border-purple-200"
+                                }`}
+                              >
+                                <ImageIcon className="w-3 h-3" />{" "}
+                                {question.images.length} Image
+                                {question.images.length > 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <CheckCircle
-                          size={20}
-                          className={
-                            darkMode ? "text-emerald-400" : "text-emerald-600"
-                          }
+
+                        <ChevronDown
+                          className={`w-5 h-5 transition-transform shrink-0 ${
+                            darkMode ? "text-slate-400" : "text-gray-400"
+                          } ${isExpanded ? "rotate-180" : ""}`}
                         />
                       </div>
-                    </div>
-                  </div>
+                    </button>
 
-                  {question.explanation && (
-                    <div
-                      className={`p-4 rounded-xl ${
-                        darkMode
-                          ? "bg-slate-800/50 border-slate-700"
-                          : "bg-gray-50 border-gray-200"
-                      } border`}
-                    >
-                      <p
-                        className={`text-xs ${
-                          darkMode ? "text-slate-400" : "text-gray-600"
-                        } mb-2 uppercase tracking-wider font-semibold`}
-                      >
-                        Explanation
-                      </p>
-                      <p
-                        className={`text-sm ${
-                          darkMode ? "text-slate-300" : "text-gray-700"
-                        } leading-relaxed`}
-                      >
-                        {question.explanation || "No explanation provided"}
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
+                    {/* Question Details (Expanded) */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className={`px-6 pb-6 border-t ${
+                            darkMode ? "border-slate-800" : "border-gray-200"
+                          }`}
+                        >
+                          {/* Question Images */}
+                          {question.images && question.images.length > 0 && (
+                            <div className="mt-6 mb-6">
+                              <h4
+                                className={`text-sm font-semibold mb-3 flex items-center gap-2 ${
+                                  darkMode ? "text-slate-300" : "text-gray-700"
+                                }`}
+                              >
+                                <ImageIcon className="w-4 h-4" />
+                                Question Images
+                              </h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {question.images.map((imageUrl, imgIdx) => (
+                                  <div
+                                    key={imgIdx}
+                                    className={`relative group overflow-hidden rounded-xl border cursor-pointer aspect-square ${
+                                      darkMode
+                                        ? "bg-slate-800 border-slate-700 hover:border-purple-500/50"
+                                        : "bg-gray-100 border-gray-200 hover:border-purple-300"
+                                    }`}
+                                    onClick={() =>
+                                      setViewingImage({
+                                        url: imageUrl,
+                                        questionIndex: originalIndex,
+                                        imageIndex: imgIdx,
+                                      })
+                                    }
+                                  >
+                                    <img
+                                      src={imageUrl}
+                                      alt={`Question ${originalIndex + 1} - Image ${
+                                        imgIdx + 1
+                                      }`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Eye className="w-6 h-6 text-white" />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Answer Comparison */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-5">
+                            <div
+                              className={`p-4 rounded-xl border transition-all ${
+                                !question.isAttempted
+                                  ? darkMode
+                                    ? "bg-yellow-500/5 border-yellow-500/20"
+                                    : "bg-yellow-50 border-yellow-200"
+                                  : question.isCorrect
+                                  ? darkMode
+                                    ? "bg-emerald-500/5 border-emerald-500/20"
+                                    : "bg-emerald-50 border-emerald-200"
+                                  : darkMode
+                                  ? "bg-red-500/5 border-red-500/20"
+                                  : "bg-red-50 border-red-200"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <p
+                                    className={`text-xs ${
+                                      darkMode ? "text-slate-400" : "text-gray-600"
+                                    } mb-2 uppercase tracking-wider font-semibold`}
+                                  >
+                                    Your Answer
+                                  </p>
+                                  <p
+                                    className={`text-base font-medium ${
+                                      !question.isAttempted
+                                        ? darkMode
+                                          ? "text-yellow-300"
+                                          : "text-yellow-700"
+                                        : question.isCorrect
+                                        ? darkMode
+                                          ? "text-emerald-300"
+                                          : "text-emerald-700"
+                                        : darkMode
+                                        ? "text-red-300"
+                                        : "text-red-700"
+                                    }`}
+                                  >
+                                    {!question.isAttempted
+                                      ? "Not Attempted"
+                                      : question.selectedAnswer || "Not Answered"}
+                                  </p>
+                                </div>
+                                {!question.isAttempted ? (
+                                  <AlertCircle
+                                    size={20}
+                                    className={
+                                      darkMode ? "text-yellow-400" : "text-yellow-600"
+                                    }
+                                  />
+                                ) : (
+                                  !question.isCorrect && (
+                                    <XCircle
+                                      size={20}
+                                      className={
+                                        darkMode ? "text-red-400" : "text-red-600"
+                                      }
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </div>
+
+                            <div
+                              className={`p-4 rounded-xl ${
+                                darkMode
+                                  ? "bg-emerald-500/5 border-emerald-500/20"
+                                  : "bg-emerald-50 border-emerald-200"
+                              } border`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <p
+                                    className={`text-xs ${
+                                      darkMode
+                                        ? "text-emerald-400/80"
+                                        : "text-emerald-700"
+                                    } mb-2 uppercase tracking-wider font-semibold`}
+                                  >
+                                    Correct Answer
+                                  </p>
+                                  <p
+                                    className={`text-base font-medium ${
+                                      darkMode
+                                        ? "text-emerald-300"
+                                        : "text-emerald-700"
+                                    }`}
+                                  >
+                                    {question.correctAnswer}
+                                  </p>
+                                </div>
+                                <CheckCircle
+                                  size={20}
+                                  className={
+                                    darkMode ? "text-emerald-400" : "text-emerald-600"
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Explanation */}
+                          {showExplanations && question.explanation && (
+                            <div
+                              className={`p-5 rounded-xl border ${
+                                darkMode
+                                  ? "bg-blue-500/10 border-blue-500/30"
+                                  : "bg-blue-50 border-blue-200"
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <BookOpen
+                                  className={`w-5 h-5 mt-0.5 shrink-0 ${
+                                    darkMode ? "text-blue-400" : "text-blue-600"
+                                  }`}
+                                />
+                                <div className="flex-1">
+                                  <h4
+                                    className={`text-sm font-semibold mb-2 ${
+                                      darkMode ? "text-blue-400" : "text-blue-700"
+                                    }`}
+                                  >
+                                    Explanation
+                                  </h4>
+                                  <p
+                                    className={`text-sm leading-relaxed ${
+                                      darkMode ? "text-slate-300" : "text-gray-700"
+                                    }`}
+                                  >
+                                    {question.explanation}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {showExplanations && !question.explanation && (
+                            <div
+                              className={`p-4 rounded-xl text-center ${
+                                darkMode
+                                  ? "bg-slate-800/30 text-slate-500"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              <p className="text-sm">
+                                No explanation available for this question.
+                              </p>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
           {totalPages > 1 && (
             <div className="mt-8">
               <Paginator
                 currentPage={currentPage}
                 totalPages={totalPages}
-                totalItems={currentAttempt.questions?.length || 0}
+                totalItems={filteredQuestions.length}
                 itemsPerPage={questionsPerPage}
                 onPageChange={setCurrentPage}
                 maxVisiblePages={5}
@@ -571,6 +902,59 @@ const TestAnalysis = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Image Viewer Modal */}
+      <AnimatePresence>
+        {viewingImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setViewingImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="relative max-w-4xl w-full max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute top-0 left-0 right-0 bg-linear-to-b from-black/80 to-transparent p-4 z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="text-purple-400" size={20} />
+                    <h3 className="text-white font-semibold">
+                      Question {viewingImage.questionIndex + 1} - Image{" "}
+                      {viewingImage.imageIndex + 1}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setViewingImage(null)}
+                    className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center p-8 pt-20 pb-16">
+                <img
+                  src={viewingImage.url}
+                  alt="Full size"
+                  className="max-w-full max-h-[75vh] object-contain rounded-lg"
+                />
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4">
+                <p className="text-gray-400 text-sm text-center">
+                  Click outside to close
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

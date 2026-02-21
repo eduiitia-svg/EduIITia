@@ -440,18 +440,18 @@ const UploadCSV = () => {
           (cat) => cat.id === selectedCategoryId,
         );
 
-         const checkResult = await dispatch(
-      checkTeacherTestCreationAccess({
-        userId: user.uid,
-        testDetails: {
-          mainCategory: selectedCat?.mainCategory, 
-          examType: selectedCat?.type,
-          subject: selectedSubject,
-          classLevel: selectedCat?.name || null, 
-          subcategory: selectedSubcategory || null,
-        },
-      }),
-    ).unwrap();
+        const checkResult = await dispatch(
+          checkTeacherTestCreationAccess({
+            userId: user.uid,
+            testDetails: {
+              mainCategory: selectedCat?.mainCategory,
+              examType: selectedCat?.type,
+              subject: selectedSubject,
+              classLevel: selectedCat?.name || null,
+              subcategory: selectedSubcategory || null,
+            },
+          }),
+        ).unwrap();
 
         if (!checkResult.canCreate) {
           toast.error(checkResult.reason);
@@ -574,18 +574,18 @@ const UploadCSV = () => {
           (cat) => cat.id === selectedCategoryId,
         );
 
-       const checkResult = await dispatch(
-      checkTeacherTestCreationAccess({
-        userId: user.uid,
-        testDetails: {
-          mainCategory: selectedCat?.mainCategory, 
-          examType: selectedCat?.type,
-          subject: selectedSubject,
-          classLevel: selectedCat?.name || null,
-          subcategory: selectedSubcategory || null,
-        },
-      }),
-    ).unwrap();
+        const checkResult = await dispatch(
+          checkTeacherTestCreationAccess({
+            userId: user.uid,
+            testDetails: {
+              mainCategory: selectedCat?.mainCategory,
+              examType: selectedCat?.type,
+              subject: selectedSubject,
+              classLevel: selectedCat?.name || null,
+              subcategory: selectedSubcategory || null,
+            },
+          }),
+        ).unwrap();
 
         if (!checkResult.canCreate) {
           toast.error(checkResult.reason);
@@ -1263,6 +1263,18 @@ const UploadCSV = () => {
                       </div>
                     </div>
                   ))}
+                  
+                  {q.explanation && (
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1 flex items-center gap-1">
+                        <BookOpen size={12} />
+                        Explanation:
+                      </p>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {q.explanation}
+                      </p>
+                    </div>
+                  )}
                   {parsedQuestions.length > 5 && (
                     <p className="text-center text-gray-600 dark:text-gray-500 text-sm">
                       ... and {parsedQuestions.length - 5} more questions

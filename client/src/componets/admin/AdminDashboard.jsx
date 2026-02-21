@@ -16,8 +16,8 @@ import { useDispatch, useSelector } from "react-redux";
 
 const AdminDashboard = () => {
   const location = useLocation();
-  const dispatch = useDispatch()
-  const {user} = useSelector((state) => state.auth)
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (user?.uid && user?.role === "admin") {
@@ -51,10 +51,17 @@ const AdminDashboard = () => {
                 path="dashboard"
                 element={
                   <PageWrapper>
-                    <DashboardHome />
+                    <FeatureGate
+                      featureName="Dashboard"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <DashboardHome />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />
+
               <Route
                 path="upload"
                 element={
@@ -148,7 +155,13 @@ const AdminDashboard = () => {
                 path="student-approval"
                 element={
                   <PageWrapper>
-                    <RegistrationRequestsDashboard />
+                    <FeatureGate
+                      featureName="Approve/Reject Students"
+                      userType="teacher"
+                      variant="full"
+                    >
+                      <RegistrationRequestsDashboard />
+                    </FeatureGate>
                   </PageWrapper>
                 }
               />

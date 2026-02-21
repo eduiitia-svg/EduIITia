@@ -24,6 +24,7 @@ import {
   X,
   Trash,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import { formatDate } from "../../../utils/formatDate";
 import toast from "react-hot-toast";
@@ -34,7 +35,7 @@ const QuestionPapers = () => {
   const { user } = useSelector((state) => state.auth);
   const { papers, loading } = useSelector((state) => state.questions);
   const { categories, loading: categoriesLoading } = useSelector(
-    (state) => state.category
+    (state) => state.category,
   );
   const [selectedPaperId, setSelectedPaperId] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
@@ -58,13 +59,13 @@ const QuestionPapers = () => {
     let filtered = [...papers];
     if (selectedCategoryId !== "all") {
       const selectedCategory = categories.find(
-        (cat) => cat.id === selectedCategoryId
+        (cat) => cat.id === selectedCategoryId,
       );
       if (selectedCategory) {
         filtered = filtered.filter(
           (paper) =>
             paper.categoryId === selectedCategoryId ||
-            paper.categoryName === selectedCategory.name
+            paper.categoryName === selectedCategory.name,
         );
       }
     }
@@ -73,7 +74,7 @@ const QuestionPapers = () => {
     }
     if (selectedSubcategory !== "all") {
       filtered = filtered.filter(
-        (paper) => paper.subcategory === selectedSubcategory
+        (paper) => paper.subcategory === selectedSubcategory,
       );
     }
     setLocalFilteredPapers(filtered);
@@ -88,7 +89,7 @@ const QuestionPapers = () => {
     ? papers.find((p) => p.id === selectedPaperId)
     : null;
   const selectedCategory = categories.find(
-    (cat) => cat.id === selectedCategoryId
+    (cat) => cat.id === selectedCategoryId,
   );
   const selectedSubjectObj = selectedCategory?.subjects.find((subj) => {
     const subjName = typeof subj === "string" ? subj : subj.name;
@@ -110,12 +111,12 @@ const QuestionPapers = () => {
   const handleDeletePaper = async (paperId) => {
     if (
       window.confirm(
-        "Are you sure you want to delete this entire test paper? This action cannot be undone."
+        "Are you sure you want to delete this entire test paper? This action cannot be undone.",
       )
     ) {
       try {
         const result = await dispatch(
-          deleteQuestionPaperAction(paperId)
+          deleteQuestionPaperAction(paperId),
         ).unwrap();
         if (result.success) {
           toast.success("Question paper deleted successfully!");
@@ -135,7 +136,7 @@ const QuestionPapers = () => {
             testId: paperId,
             questionIndex,
             imageIndex,
-          })
+          }),
         ).unwrap();
         if (result.success) {
           toast.success("Image deleted successfully!");
@@ -295,8 +296,8 @@ const QuestionPapers = () => {
                       question.questionLevel === "Easy"
                         ? "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/20"
                         : question.questionLevel === "Medium"
-                        ? "bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-500/20"
-                        : "bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/20"
+                          ? "bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-500/20"
+                          : "bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-300 dark:border-red-500/20"
                     }`}
                   >
                     {question.questionLevel}
@@ -330,6 +331,7 @@ const QuestionPapers = () => {
                     );
                   })}
                 </div>
+
                 {question.images && question.images.length > 0 && (
                   <div className="mt-6 pt-4 border-t border-gray-200 dark:border-white/5">
                     <div className="flex items-center gap-2 mb-4">
@@ -375,6 +377,24 @@ const QuestionPapers = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {question.explanation && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/5">
+                    <div className="flex items-start gap-2 p-4 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl">
+                      <div className="shrink-0">
+                        <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-1">
+                          Explanation
+                        </h5>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                          {question.explanation}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -455,7 +475,7 @@ const QuestionPapers = () => {
                           handleDeleteImage(
                             viewingImage.paperId,
                             viewingImage.questionIndex,
-                            viewingImage.imageIndex
+                            viewingImage.imageIndex,
                           )
                         }
                         className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"

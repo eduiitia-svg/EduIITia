@@ -80,8 +80,8 @@ const App = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
 
- useEffect(() => {
-  const SESSION_DURATION = 24 * 60 * 60 * 1000; 
+useEffect(() => {
+  const SESSION_DURATION = 24 * 60 * 60 * 1000;
 
   const isSessionValid = () => {
     try {
@@ -89,20 +89,17 @@ const App = () => {
       if (!storedData) return false;
 
       const parsedData = JSON.parse(storedData);
-      
-      if (!parsedData.loginTimestamp) {
-        const loginData = {
+      const loginTimestamp = parsedData.loginTimestamp;
+
+      if (!loginTimestamp) {
+        localStorage.setItem("user", JSON.stringify({
           ...parsedData,
           loginTimestamp: Date.now(),
-        };
-        localStorage.setItem("user", JSON.stringify(loginData));
+        }));
         return true;
       }
 
-      const now = Date.now();
-      const sessionAge = now - parsedData.loginTimestamp;
-
-      return sessionAge < SESSION_DURATION;
+      return (Date.now() - loginTimestamp) < SESSION_DURATION;
     } catch (error) {
       console.error("Error checking session:", error);
       return false;
@@ -111,82 +108,78 @@ const App = () => {
 
   const initializeAuth = async () => {
     const storedUser = localStorage.getItem("user");
+    if (!storedUser) return;
 
-    if (storedUser) {
-      try {
-        if (!isSessionValid()) {
-          localStorage.clear();
-          dispatch(logout());
-          toast.error("Your session has expired. Please login again.");
-          return;
-        }
-
-        const parsedUser = JSON.parse(storedUser);
-        const userData = parsedUser.user || parsedUser; 
-        
-        const currentUserId = auth.currentUser?.uid;
-
-        if (currentUserId && currentUserId !== userData.uid) {
-          localStorage.clear();
-          window.location.reload();
-          return;
-        }
-
-        dispatch(setUser(userData));
-
-        if (userData?.uid) {
-          const userRef = doc(db, "users", userData.uid);
-          const userSnap = await getDoc(userRef);
-
-          if (userSnap.exists()) {
-            const freshUserData = userSnap.data();
-            const updatedUser = {
-              uid: userData.uid,
-              ...freshUserData,
-            };
-
-            dispatch(setUser(updatedUser));
-            
-            const existingData = JSON.parse(storedUser);
-            const loginData = {
-              user: updatedUser,
-              loginTimestamp: existingData.loginTimestamp || Date.now(),
-            };
-            localStorage.setItem("user", JSON.stringify(loginData));
-
-            if (
-              freshUserData.role === "student" &&
-              freshUserData.subscription
-            ) {
-              dispatch(getSubscriptionStatus(userData.uid));
-            } else if (freshUserData.role === "admin") {
-              dispatch(getTeacherSubscriptionStatus(userData.uid));
-            }
-          } else {
-            localStorage.clear();
-          }
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        localStorage.removeItem("user");
+    try {
+      if (!isSessionValid()) {
+        localStorage.clear();
+        dispatch(logout());
+        toast.error("Your session has expired. Please login again.");
+        return;
       }
+
+      const parsedUser = JSON.parse(storedUser);
+      const userData = parsedUser.user || parsedUser;
+
+      const currentUserId = auth.currentUser?.uid;
+      if (currentUserId && currentUserId !== userData.uid) {
+        localStorage.clear();
+        window.location.reload();
+        return;
+      }
+
+      dispatch(setUser(userData));
+
+      if (userData?.uid) {
+        const userRef = doc(db, "users", userData.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const freshUserData = userSnap.data();
+          const updatedUser = { uid: userData.uid, ...freshUserData };
+
+          dispatch(setUser(updatedUser));
+
+          const existingTimestamp = parsedUser.loginTimestamp || Date.now();
+          localStorage.setItem("user", JSON.stringify({
+            user: updatedUser,
+            loginTimestamp: existingTimestamp,
+          }));
+
+          if (freshUserData.role === "student" && freshUserData.subscription) {
+            dispatch(getSubscriptionStatus(userData.uid));
+          } else if (freshUserData.role === "admin") {
+            dispatch(getTeacherSubscriptionStatus(userData.uid));
+          }
+        } else {
+          localStorage.clear();
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing auth:", error);
+      localStorage.removeItem("user");
     }
   };
 
   initializeAuth();
 
-  const intervalId = setInterval(() => {
-    if (!isSessionValid()) {
-      localStorage.clear();
-      dispatch(logout());
-      toast.error("Your session has expired. Please login again.", {
-        duration: 4000,
-      });
-      window.location.href = "/";
-    }
-  }, 30 * 1000);
+ 
+  const timeout = setTimeout(() => {
+    const intervalId = setInterval(() => {
+      if (localStorage.getItem("user") && !isSessionValid()) {
+        localStorage.clear();
+        dispatch(logout());
+        toast.error("Your session has expired. Please login again.", {
+          duration: 4000,
+        });
+        window.location.href = "/";
+      }
+    }, 30 * 1000);
 
-  return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId);
+  }, 5000); 
+
+  return () => clearTimeout(timeout);
 }, [dispatch]);
 
   return (

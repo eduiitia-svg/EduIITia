@@ -108,6 +108,12 @@ export const getTestHistory = createAsyncThunk(
           };
         });
 
+        const actualCorrectAnswers = questions.filter((q) => q.isCorrect).length;
+        const actualIncorrectAnswers = questions.filter(
+          (q) => q.isAttempted && !q.isCorrect
+        ).length;
+        const actualSkippedAnswers = questions.filter((q) => !q.isAttempted).length;
+
         history.push({
           attemptId: docSnapshot.id,
           testName: data.testName || "Untitled Test",
@@ -115,10 +121,10 @@ export const getTestHistory = createAsyncThunk(
           startedAt: data.startedAt,
           submittedAt: data.submittedAt || null,
           score: data.score || 0,
-          totalQuestions: data.totalQuestions || 0,
-          correctAnswers: data.correctAnswers || 0,
-          incorrectAnswers: data.incorrectAnswers || 0,
-          skippedAnswers: data.skippedAnswers || 0,
+          totalQuestions: questions.length, 
+          correctAnswers: actualCorrectAnswers, 
+          incorrectAnswers: actualIncorrectAnswers, 
+          skippedAnswers: actualSkippedAnswers,
           markingScheme: "+4 for correct, -1 for wrong",
           timeSpent: data.timeSpent || 0,
           questions: questions,
@@ -327,6 +333,12 @@ export const getTestAttemptById = createAsyncThunk(
         };
       });
 
+      const actualCorrectAnswers = questions.filter((q) => q.isCorrect).length;
+      const actualIncorrectAnswers = questions.filter(
+        (q) => q.isAttempted && !q.isCorrect
+      ).length;
+      const actualSkippedAnswers = questions.filter((q) => !q.isAttempted).length;
+
       return {
         attemptId: attemptDoc.id,
         testName: data.testName || "Untitled Test",
@@ -334,10 +346,10 @@ export const getTestAttemptById = createAsyncThunk(
         startedAt: data.startedAt,
         submittedAt: data.submittedAt || null,
         score: data.score || 0,
-        totalQuestions: data.totalQuestions || 0,
-        correctAnswers: data.correctAnswers || 0,
-        incorrectAnswers: data.incorrectAnswers || 0,
-        skippedAnswers: data.skippedAnswers || 0,
+        totalQuestions: questions.length, 
+        correctAnswers: actualCorrectAnswers, 
+        incorrectAnswers: actualIncorrectAnswers, 
+        skippedAnswers: actualSkippedAnswers, 
         markingScheme: "+4 for correct, -1 for wrong",
         timeSpent: data.timeSpent || 0,
         questions: questions,

@@ -46,6 +46,22 @@ const SubscriptionPlans = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isExamTypeCustom, setIsExamTypeCustom] = useState(false);
+  const [customExamTypes, setCustomExamTypes] = useState(() => {
+    const saved = localStorage.getItem("customExamTypes");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved exam types:", e);
+      }
+    }
+    return {
+      school: ["CBSE Board", "ICSE Board", "State Board"],
+      entrance: ["Engineering Entrance", "Medical Entrance", "Law Entrance"],
+      recruitment: ["Government Job", "Banking", "Railway", "Police"],
+    };
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -59,6 +75,10 @@ const SubscriptionPlans = () => {
     subcategory: "All",
     mainCategory: "All",
   });
+
+  useEffect(() => {
+    localStorage.setItem("customExamTypes", JSON.stringify(customExamTypes));
+  }, [customExamTypes]);
 
   useEffect(() => {
     fetchPlans();
@@ -166,6 +186,7 @@ const SubscriptionPlans = () => {
   const openCreateModal = () => {
     setIsEditing(false);
     setSelectedPlan(null);
+    setIsExamTypeCustom(false);
     setFormData({
       name: "",
       type: "",
@@ -297,7 +318,6 @@ const SubscriptionPlans = () => {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-teal-500/30 overflow-hidden relative rounded-3xl">
-      {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-96 bg-linear-to-b from-teal-900/10 to-transparent pointer-events-none" />
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -345,7 +365,6 @@ const SubscriptionPlans = () => {
           />
         </motion.div>
 
-        {/* Footer Stats */}
         <div className="mt-6 flex justify-between items-center text-xs text-slate-500 font-mono px-2">
           <span>DB_SYNC: {plans.length} RECORDS</span>
           <span className="flex items-center gap-2">
@@ -355,7 +374,6 @@ const SubscriptionPlans = () => {
         </div>
       </div>
 
-      {/* Modern Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -396,14 +414,12 @@ const SubscriptionPlans = () => {
                 </button>
               </div>
 
-              {/* Modal Body - Scrollable */}
               <div className="overflow-y-auto px-8 py-6 custom-scrollbar">
                 <form
                   id="plan-form"
                   onSubmit={handleSubmit}
                   className="space-y-6"
                 >
-                  {/* Plan Name */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                       Plan Name
@@ -411,7 +427,7 @@ const SubscriptionPlans = () => {
                     <div className="relative group">
                       <Layers
                         size={18}
-                        className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-teal-400 transition-colors"
+                        className="absolute left-3 top-3.5 mt-1 text-slate-500 group-focus-within:text-teal-400 transition-colors"
                       />
                       <input
                         type="text"
@@ -426,12 +442,14 @@ const SubscriptionPlans = () => {
                     </div>
                   </div>
 
-                  {/* Grid: Main Category & Exam Type */}
-                  <div className="grid grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        Main Category *
-                      </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between h-6 mb-2">
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          Main Category *
+                        </label>
+                      </div>
+
                       <div className="relative">
                         <select
                           value={formData.mainCategory}
@@ -439,7 +457,7 @@ const SubscriptionPlans = () => {
                             setFormData({
                               ...formData,
                               mainCategory: e.target.value,
-                              type: "", // Reset exam type when main category changes
+                              type: "",
                             });
                           }}
                           className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-white appearance-none outline-none transition-all cursor-pointer"
@@ -462,70 +480,146 @@ const SubscriptionPlans = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        Exam Type *
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={formData.type}
-                          onChange={(e) =>
-                            setFormData({ ...formData, type: e.target.value })
-                          }
-                          className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-white appearance-none outline-none transition-all cursor-pointer"
-                          required
-                          disabled={
-                            !formData.mainCategory ||
-                            formData.mainCategory === "All"
-                          }
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between h-6 mb-2">
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          Exam Type *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsExamTypeCustom(!isExamTypeCustom);
+                            if (!isExamTypeCustom) {
+                              setFormData({ ...formData, type: "" });
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                            isExamTypeCustom
+                              ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                              : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                          }`}
                         >
-                          <option value="">
-                            {!formData.mainCategory ||
-                            formData.mainCategory === "All"
-                              ? "Select Main Category First"
-                              : "Select Exam Type..."}
-                          </option>
-                          {formData.mainCategory === "school" && (
-                            <>
-                              <option value="CBSE Board">CBSE Board</option>
-                              <option value="ICSE Board">ICSE Board</option>
-                              <option value="State Board">State Board</option>
-                            </>
-                          )}
-                          {formData.mainCategory === "entrance" && (
-                            <>
-                              <option value="Engineering Entrance">
-                                Engineering Entrance
-                              </option>
-                              <option value="Medical Entrance">
-                                Medical Entrance
-                              </option>
-                              <option value="Law Entrance">Law Entrance</option>
-                            </>
-                          )}
-                          {formData.mainCategory === "recruitment" && (
-                            <>
-                              <option value="Government Job">
-                                Government Job
-                              </option>
-                              <option value="Banking">Banking</option>
-                              <option value="Railway">Railway</option>
-                              <option value="Police">Police</option>
-                            </>
-                          )}
-                        </select>
-                        <div className="absolute right-4 top-3.5 pointer-events-none text-slate-500">
-                          <svg
-                            className="w-4 h-4 fill-current"
-                            viewBox="0 0 20 20"
+                          <div
+                            className={`relative w-7 h-4 rounded-full transition-colors ${
+                              isExamTypeCustom
+                                ? "bg-purple-500"
+                                : "bg-slate-600"
+                            }`}
                           >
-                            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                          </svg>
-                        </div>
+                            <div
+                              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+                                isExamTypeCustom
+                                  ? "translate-x-3.5"
+                                  : "translate-x-0.5"
+                              }`}
+                            />
+                          </div>
+                          <span className="whitespace-nowrap">
+                            {isExamTypeCustom ? "Custom" : "Dropdown"}
+                          </span>
+                        </button>
                       </div>
+
+                      <div className="relative">
+                        {isExamTypeCustom ? (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={formData.type}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  type: e.target.value,
+                                })
+                              }
+                              onBlur={() => {
+                                if (
+                                  formData.type &&
+                                  formData.mainCategory &&
+                                  formData.mainCategory !== "All" &&
+                                  !customExamTypes[
+                                    formData.mainCategory
+                                  ]?.includes(formData.type)
+                                ) {
+                                  setCustomExamTypes((prev) => ({
+                                    ...prev,
+                                    [formData.mainCategory]: [
+                                      ...(prev[formData.mainCategory] || []),
+                                      formData.type,
+                                    ],
+                                  }));
+                                }
+                              }}
+                              className="w-full px-4 py-3 bg-slate-900 border border-purple-500 rounded-xl focus:border-purple-400 focus:ring-1 focus:ring-purple-400 text-white appearance-none outline-none transition-all"
+                              placeholder="Type custom exam type..."
+                              required
+                              disabled={
+                                !formData.mainCategory ||
+                                formData.mainCategory === "All"
+                              }
+                            />
+                            <p className="text-xs text-purple-400 ml-1 flex items-center gap-1">
+                              <span>✨</span> Saved for future use
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <select
+                              value={formData.type}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  type: e.target.value,
+                                })
+                              }
+                              className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-white appearance-none outline-none transition-all cursor-pointer"
+                              required
+                              disabled={
+                                !formData.mainCategory ||
+                                formData.mainCategory === "All"
+                              }
+                            >
+                              <option value="">
+                                {!formData.mainCategory ||
+                                formData.mainCategory === "All"
+                                  ? "Select Main Category First"
+                                  : "Select Exam Type..."}
+                              </option>
+                              {formData.mainCategory === "school" &&
+                                customExamTypes.school.map((type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                              {formData.mainCategory === "entrance" &&
+                                customExamTypes.entrance.map((type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                              {formData.mainCategory === "recruitment" &&
+                                customExamTypes.recruitment.map((type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-3.5 pointer-events-none text-slate-500">
+                              <svg
+                                className="w-4 h-4 fill-current"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                              </svg>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                     
                       {(!formData.mainCategory ||
                         formData.mainCategory === "All") && (
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="absolute -bottom-6 left-0 text-xs text-slate-500">
                           💡 Select a main category first
                         </p>
                       )}
@@ -541,7 +635,7 @@ const SubscriptionPlans = () => {
                       <div className="relative group">
                         <IndianRupee
                           size={16}
-                          className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-emerald-400 transition-colors"
+                          className="absolute left-3 top-3.5 mt-1 text-slate-500 group-focus-within:text-emerald-400 transition-colors"
                         />
                         <input
                           type="number"
@@ -565,7 +659,7 @@ const SubscriptionPlans = () => {
                       <div className="relative group">
                         <Calendar
                           size={18}
-                          className="absolute left-3 top-3.5 text-slate-500 group-focus-within:text-teal-400 transition-colors"
+                          className="absolute left-3 top-3.5 mt-1 text-slate-500 group-focus-within:text-teal-400 transition-colors"
                         />
                         <input
                           type="number"

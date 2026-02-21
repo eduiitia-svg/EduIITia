@@ -33,11 +33,7 @@ const AVAILABLE_TEACHER_FEATURES = [
   { id: "Study Material", label: "Study Material", icon: Layers },
   { id: "Test Attempts", label: "Test Attempts", icon: Clock },
   { id: "Categories", label: "Categories", icon: Target },
-  {
-    id: "Approve/Reject Students",
-    label: "Approve/Reject Students",
-    icon: CheckCircle2,
-  },
+  { id: "Approve/Reject Students", label: "Approve/Reject Students", icon: CheckCircle2 },
   { id: "Add Testimonials", label: "Add Testimonials", icon: Sparkles },
 ];
 
@@ -71,6 +67,22 @@ const TeacherPlanManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isExamTypeCustom, setIsExamTypeCustom] = useState(false);
+  const [customExamTypes, setCustomExamTypes] = useState(() => {
+    const saved = localStorage.getItem("customTeacherExamTypes");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved exam types:", e);
+      }
+    }
+    return {
+      school: ["CBSE Board", "ICSE Board", "State Board"],
+      entrance: ["Engineering Entrance", "Medical Entrance", "Law Entrance"],
+      recruitment: ["Government Job", "Banking", "Railway", "Police"],
+    };
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -85,6 +97,13 @@ const TeacherPlanManagement = () => {
     classLevel: "",
     subcategory: "",
   });
+
+  useEffect(() => {
+    localStorage.setItem(
+      "customTeacherExamTypes",
+      JSON.stringify(customExamTypes),
+    );
+  }, [customExamTypes]);
 
   useEffect(() => {
     fetchPlans();
@@ -175,6 +194,7 @@ const TeacherPlanManagement = () => {
   const openCreateModal = () => {
     setIsEditing(false);
     setSelectedPlan(null);
+    setIsExamTypeCustom(false);
     setFormData({
       name: "",
       price: "",
@@ -482,7 +502,7 @@ const TeacherPlanManagement = () => {
                           Validity
                         </label>
                         <div className="relative">
-                          <span className="absolute left-4 top-3.5 text-gray-500">
+                          <span className="absolute left-4 top-3.5 mt-1 text-gray-500">
                             <Clock size={14} />
                           </span>
                           <input
@@ -557,40 +577,116 @@ const TeacherPlanManagement = () => {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
-                        Exam Type *
-                      </label>
-                      <select
-                        value={formData.examType}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            examType: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-3 bg-[#020617] border border-white/10 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 text-white outline-none transition-all"
-                        required
-                        disabled={!formData.mainCategory}
-                      >
-                        <option value="">
-                          {formData.mainCategory
-                            ? "Select Exam Type"
-                            : "Select Main Category First"}
-                        </option>
-                        {formData.mainCategory &&
-                          EXAM_TYPE_OPTIONS[formData.mainCategory]?.map(
-                            (type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ),
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+                          Exam Type *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsExamTypeCustom(!isExamTypeCustom);
+                            if (!isExamTypeCustom) {
+                              setFormData({ ...formData, examType: "" });
+                            }
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
+                            isExamTypeCustom
+                              ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                              : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+                          }`}
+                        >
+                          <div
+                            className={`relative w-7 h-4 rounded-full transition-colors ${
+                              isExamTypeCustom ? "bg-purple-500" : "bg-gray-600"
+                            }`}
+                          >
+                            <div
+                              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${
+                                isExamTypeCustom
+                                  ? "translate-x-3.5"
+                                  : "translate-x-0.5"
+                              }`}
+                            />
+                          </div>
+                          <span className="whitespace-nowrap">
+                            {isExamTypeCustom ? "Custom" : "Dropdown"}
+                          </span>
+                        </button>
+                      </div>
+
+                      {isExamTypeCustom ? (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={formData.examType}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                examType: e.target.value,
+                              })
+                            }
+                            onBlur={() => {
+                              if (
+                                formData.examType &&
+                                formData.mainCategory &&
+                                !customExamTypes[
+                                  formData.mainCategory
+                                ]?.includes(formData.examType)
+                              ) {
+                                setCustomExamTypes((prev) => ({
+                                  ...prev,
+                                  [formData.mainCategory]: [
+                                    ...(prev[formData.mainCategory] || []),
+                                    formData.examType,
+                                  ],
+                                }));
+                              }
+                            }}
+                            className="w-full px-4 py-3 bg-[#020617] border border-purple-500 rounded-xl focus:ring-1 focus:ring-purple-500 focus:border-purple-500 text-white outline-none transition-all"
+                            placeholder="Type custom exam type..."
+                            required
+                            disabled={!formData.mainCategory}
+                          />
+                          <p className="text-xs text-purple-400 ml-1 flex items-center gap-1">
+                            <Sparkles size={12} />
+                            Saved for future use
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={formData.examType}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                examType: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-3 bg-[#020617] border border-white/10 rounded-xl focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 text-white outline-none transition-all"
+                            required
+                            disabled={!formData.mainCategory}
+                          >
+                            <option value="">
+                              {formData.mainCategory
+                                ? "Select Exam Type"
+                                : "Select Main Category First"}
+                            </option>
+                            {formData.mainCategory &&
+                              customExamTypes[formData.mainCategory]?.map(
+                                (type) => (
+                                  <option key={type} value={type}>
+                                    {type}
+                                  </option>
+                                ),
+                              )}
+                          </select>
+                          {!formData.mainCategory && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              💡 Select a main category first to see exam type
+                              options
+                            </p>
                           )}
-                      </select>
-                      {!formData.mainCategory && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          💡 Select a main category first to see exam type
-                          options
-                        </p>
+                        </>
                       )}
                     </div>
 

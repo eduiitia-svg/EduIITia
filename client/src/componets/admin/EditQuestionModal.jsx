@@ -18,6 +18,7 @@ const EditQuestionModal = ({ paper, question, index, onClose }) => {
     options: [...question.options],
     correctAnswer: question.correctAnswer,
     questionLevel: question.questionLevel,
+     explanation: question.explanation || '',
   });
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -124,7 +125,6 @@ const EditQuestionModal = ({ paper, question, index, onClose }) => {
                   placeholder="Enter the question text"
                 />
               </div>
-
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-4">
                   Options{" "}
@@ -150,6 +150,34 @@ placeholder={Enter option ${String.fromCharCode(65 + index)}`}
                   ))}
                 </div>
               </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
+                  <span className="flex items-center space-x-1">
+                    <BookOpen
+                      className="text-blue-600 dark:text-blue-500"
+                      size={16}
+                    />
+                    <span>Explanation</span>
+                    <span className="text-gray-500 dark:text-gray-600 text-xs">
+                      (Optional)
+                    </span>
+                  </span>
+                </label>
+                <textarea
+                  value={formData.explanation || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, explanation: e.target.value })
+                  }
+                  rows="4"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-white/10 bg-gray-50 dark:bg-black/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder-gray-500 text-gray-900 dark:text-white transition-colors"
+                  placeholder="Provide a detailed explanation for the correct answer (optional)"
+                />
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-600">
+                  Help students understand why this answer is correct
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
@@ -231,7 +259,6 @@ placeholder={Enter option ${String.fromCharCode(65 + index)}`}
                   </div>
                 </div>
               </div>
-
               <div className="flex justify-end space-x-3 pt-6 border-t border-gray-300 dark:border-white/10">
                 <button
                   type="button"
