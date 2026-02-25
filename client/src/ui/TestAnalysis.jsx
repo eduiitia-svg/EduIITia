@@ -34,7 +34,7 @@ const TestAnalysis = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const questionsPerPage = 5;
-  const [filter, setFilter] = useState("all"); 
+  const [filter, setFilter] = useState("all");
   const [showExplanations, setShowExplanations] = useState(true);
   const [expandedQuestions, setExpandedQuestions] = useState(new Set());
   const [viewingImage, setViewingImage] = useState(null);
@@ -60,8 +60,8 @@ const TestAnalysis = () => {
     if (expandedQuestions.size === filteredQuestions.length) {
       setExpandedQuestions(new Set());
     } else {
-      const allIndices = filteredQuestions.map((_, idx) => 
-        currentAttempt.questions.indexOf(filteredQuestions[idx])
+      const allIndices = filteredQuestions.map((_, idx) =>
+        currentAttempt.questions.indexOf(filteredQuestions[idx]),
       );
       setExpandedQuestions(new Set(allIndices));
     }
@@ -102,7 +102,6 @@ const TestAnalysis = () => {
     if (filter === "skipped") return !q.isAttempted;
     return true;
   });
-  
 
   const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
   const startIndex = (currentPage - 1) * questionsPerPage;
@@ -218,7 +217,7 @@ const TestAnalysis = () => {
                 <div className="flex items-center gap-4 flex-wrap">
                   <span
                     className={`px-3 py-1 border rounded-full text-sm font-medium ${getScoreBadge(
-                      currentAttempt.score
+                      currentAttempt.score,
                     )}`}
                   >
                     {getPerformanceText(currentAttempt.score)}
@@ -237,7 +236,7 @@ const TestAnalysis = () => {
               <div className="text-right">
                 <div
                   className={`text-5xl font-bold ${getScoreColor(
-                    currentAttempt.score
+                    currentAttempt.score,
                   )} drop-shadow-lg`}
                 >
                   {currentAttempt.score}%
@@ -280,7 +279,9 @@ const TestAnalysis = () => {
                 Score
               </span>
             </div>
-            <p className={`text-3xl font-bold ${getScoreColor(currentAttempt.score)}`}>
+            <p
+              className={`text-3xl font-bold ${getScoreColor(currentAttempt.score)}`}
+            >
               {currentAttempt.score}%
             </p>
           </div>
@@ -402,8 +403,8 @@ const TestAnalysis = () => {
                       ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
                       : "bg-cyan-100 text-cyan-700 border border-cyan-200"
                     : darkMode
-                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                      ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                      : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
                 }`}
               >
                 All ({currentAttempt.totalQuestions})
@@ -419,8 +420,8 @@ const TestAnalysis = () => {
                       ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                       : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                     : darkMode
-                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                      ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                      : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
                 }`}
               >
                 Correct ({currentAttempt.correctAnswers})
@@ -436,8 +437,8 @@ const TestAnalysis = () => {
                       ? "bg-red-500/20 text-red-400 border border-red-500/30"
                       : "bg-red-100 text-red-700 border border-red-200"
                     : darkMode
-                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                      ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                      : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
                 }`}
               >
                 Incorrect ({currentAttempt.incorrectAnswers})
@@ -453,8 +454,8 @@ const TestAnalysis = () => {
                       ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                       : "bg-amber-100 text-amber-700 border border-amber-200"
                     : darkMode
-                    ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                    : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                      ? "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
+                      : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
                 }`}
               >
                 Skipped ({currentAttempt.skippedAnswers})
@@ -548,7 +549,8 @@ const TestAnalysis = () => {
           ) : (
             <div className="space-y-6">
               {currentQuestions.map((question, index) => {
-                const originalIndex = currentAttempt.questions.indexOf(question);
+                const originalIndex =
+                  currentAttempt.questions.indexOf(question);
                 const isExpanded = expandedQuestions.has(originalIndex);
 
                 return (
@@ -565,12 +567,12 @@ const TestAnalysis = () => {
                           ? "border-yellow-500/20 hover:border-yellow-500/40"
                           : "border-yellow-200 hover:border-yellow-300"
                         : question.isCorrect
-                        ? darkMode
-                          ? "border-emerald-500/20 hover:border-emerald-500/40"
-                          : "border-emerald-200 hover:border-emerald-300"
-                        : darkMode
-                        ? "border-red-500/20 hover:border-red-500/40"
-                        : "border-red-200 hover:border-red-300"
+                          ? darkMode
+                            ? "border-emerald-500/20 hover:border-emerald-500/40"
+                            : "border-emerald-200 hover:border-emerald-300"
+                          : darkMode
+                            ? "border-red-500/20 hover:border-red-500/40"
+                            : "border-red-200 hover:border-red-300"
                     }`}
                   >
                     {/* Question Header - Clickable */}
@@ -585,7 +587,8 @@ const TestAnalysis = () => {
                               darkMode ? "text-emerald-500" : "text-emerald-600"
                             } font-mono text-sm mb-2 block`}
                           >
-                            QUESTION {String(originalIndex + 1).padStart(2, "0")}
+                            QUESTION{" "}
+                            {String(originalIndex + 1).padStart(2, "0")}
                           </span>
                           <p
                             className={`${
@@ -594,7 +597,7 @@ const TestAnalysis = () => {
                           >
                             {question.questionText}
                           </p>
-                          
+
                           {/* Badges */}
                           <div className="flex flex-wrap items-center gap-3 mt-3">
                             <span
@@ -604,12 +607,12 @@ const TestAnalysis = () => {
                                     ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
                                     : "bg-yellow-50 text-yellow-700 border-yellow-200"
                                   : question.isCorrect
-                                  ? darkMode
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : darkMode
-                                  ? "bg-red-500/10 text-red-400 border-red-500/20"
-                                  : "bg-red-50 text-red-700 border-red-200"
+                                    ? darkMode
+                                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                      : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : darkMode
+                                      ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                      : "bg-red-50 text-red-700 border-red-200"
                               }`}
                             >
                               {!question.isAttempted ? (
@@ -635,12 +638,12 @@ const TestAnalysis = () => {
                                       ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                                       : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                     : question.questionLevel === "Medium"
-                                    ? darkMode
-                                      ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
-                                      : "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                                    : darkMode
-                                    ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                                    : "bg-red-50 text-red-700 border border-red-200"
+                                      ? darkMode
+                                        ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                                        : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                                      : darkMode
+                                        ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                        : "bg-red-50 text-red-700 border border-red-200"
                                 }`}
                               >
                                 {question.questionLevel}
@@ -727,7 +730,6 @@ const TestAnalysis = () => {
                             </div>
                           )}
 
-                          {/* Answer Comparison */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-5">
                             <div
                               className={`p-4 rounded-xl border transition-all ${
@@ -736,19 +738,21 @@ const TestAnalysis = () => {
                                     ? "bg-yellow-500/5 border-yellow-500/20"
                                     : "bg-yellow-50 border-yellow-200"
                                   : question.isCorrect
-                                  ? darkMode
-                                    ? "bg-emerald-500/5 border-emerald-500/20"
-                                    : "bg-emerald-50 border-emerald-200"
-                                  : darkMode
-                                  ? "bg-red-500/5 border-red-500/20"
-                                  : "bg-red-50 border-red-200"
+                                    ? darkMode
+                                      ? "bg-emerald-500/5 border-emerald-500/20"
+                                      : "bg-emerald-50 border-emerald-200"
+                                    : darkMode
+                                      ? "bg-red-500/5 border-red-500/20"
+                                      : "bg-red-50 border-red-200"
                               }`}
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1">
                                   <p
                                     className={`text-xs ${
-                                      darkMode ? "text-slate-400" : "text-gray-600"
+                                      darkMode
+                                        ? "text-slate-400"
+                                        : "text-gray-600"
                                     } mb-2 uppercase tracking-wider font-semibold`}
                                   >
                                     Your Answer
@@ -760,24 +764,27 @@ const TestAnalysis = () => {
                                           ? "text-yellow-300"
                                           : "text-yellow-700"
                                         : question.isCorrect
-                                        ? darkMode
-                                          ? "text-emerald-300"
-                                          : "text-emerald-700"
-                                        : darkMode
-                                        ? "text-red-300"
-                                        : "text-red-700"
+                                          ? darkMode
+                                            ? "text-emerald-300"
+                                            : "text-emerald-700"
+                                          : darkMode
+                                            ? "text-red-300"
+                                            : "text-red-700"
                                     }`}
                                   >
                                     {!question.isAttempted
                                       ? "Not Attempted"
-                                      : question.selectedAnswer || "Not Answered"}
+                                      : question.selectedAnswer ||
+                                        "Not Answered"}
                                   </p>
                                 </div>
                                 {!question.isAttempted ? (
                                   <AlertCircle
                                     size={20}
                                     className={
-                                      darkMode ? "text-yellow-400" : "text-yellow-600"
+                                      darkMode
+                                        ? "text-yellow-400"
+                                        : "text-yellow-600"
                                     }
                                   />
                                 ) : (
@@ -785,7 +792,9 @@ const TestAnalysis = () => {
                                     <XCircle
                                       size={20}
                                       className={
-                                        darkMode ? "text-red-400" : "text-red-600"
+                                        darkMode
+                                          ? "text-red-400"
+                                          : "text-red-600"
                                       }
                                     />
                                   )
@@ -824,14 +833,15 @@ const TestAnalysis = () => {
                                 <CheckCircle
                                   size={20}
                                   className={
-                                    darkMode ? "text-emerald-400" : "text-emerald-600"
+                                    darkMode
+                                      ? "text-emerald-400"
+                                      : "text-emerald-600"
                                   }
                                 />
                               </div>
                             </div>
                           </div>
 
-                          {/* Explanation */}
                           {showExplanations && question.explanation && (
                             <div
                               className={`p-5 rounded-xl border ${
@@ -849,23 +859,75 @@ const TestAnalysis = () => {
                                 <div className="flex-1">
                                   <h4
                                     className={`text-sm font-semibold mb-2 ${
-                                      darkMode ? "text-blue-400" : "text-blue-700"
+                                      darkMode
+                                        ? "text-blue-400"
+                                        : "text-blue-700"
                                     }`}
                                   >
                                     Explanation
                                   </h4>
                                   <p
                                     className={`text-sm leading-relaxed ${
-                                      darkMode ? "text-slate-300" : "text-gray-700"
+                                      darkMode
+                                        ? "text-slate-300"
+                                        : "text-gray-700"
                                     }`}
                                   >
                                     {question.explanation}
                                   </p>
+
+                                  {question.explanationImages &&
+                                    question.explanationImages.length > 0 && (
+                                      <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-500/20">
+                                        <p
+                                          className={`text-xs font-semibold mb-3 flex items-center gap-1 ${
+                                            darkMode
+                                              ? "text-blue-400"
+                                              : "text-blue-600"
+                                          }`}
+                                        >
+                                          <ImageIcon className="w-3 h-3" />
+                                          Explanation Images (
+                                          {question.explanationImages.length})
+                                        </p>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                          {question.explanationImages.map(
+                                            (imageUrl, imgIdx) => (
+                                              <div
+                                                key={imgIdx}
+                                                className={`relative group overflow-hidden rounded-xl border cursor-pointer aspect-square ${
+                                                  darkMode
+                                                    ? "bg-slate-800 border-blue-500/30 hover:border-blue-400/60"
+                                                    : "bg-blue-100/50 border-blue-200 hover:border-blue-400"
+                                                }`}
+                                                onClick={() =>
+                                                  setViewingImage({
+                                                    url: imageUrl,
+                                                    questionIndex:
+                                                      originalIndex,
+                                                    imageIndex: imgIdx,
+                                                    type: "explanation",
+                                                  })
+                                                }
+                                              >
+                                                <img
+                                                  src={imageUrl}
+                                                  alt={`Explanation ${originalIndex + 1} - Image ${imgIdx + 1}`}
+                                                  className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                  <Eye className="w-5 h-5 text-white" />
+                                                </div>
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                 </div>
                               </div>
                             </div>
                           )}
-
                           {showExplanations && !question.explanation && (
                             <div
                               className={`p-4 rounded-xl text-center ${
@@ -910,44 +972,87 @@ const TestAnalysis = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setViewingImage(null)}
           >
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="relative max-w-4xl w-full max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden"
+              className={`relative max-w-4xl w-full max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl ${
+                darkMode ? "bg-slate-900" : "bg-white"
+              }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="absolute top-0 left-0 right-0 bg-linear-to-b from-black/80 to-transparent p-4 z-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="text-purple-400" size={20} />
-                    <h3 className="text-white font-semibold">
-                      Question {viewingImage.questionIndex + 1} - Image{" "}
-                      {viewingImage.imageIndex + 1}
-                    </h3>
-                  </div>
-                  <button
-                    onClick={() => setViewingImage(null)}
-                    className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
+              <div
+                className={`flex items-center justify-between px-4 py-3 border-b ${
+                  darkMode
+                    ? "bg-black/40 border-slate-700"
+                    : "bg-gray-100 border-gray-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {viewingImage.type === "explanation" ? (
+                    <BookOpen
+                      className={darkMode ? "text-blue-400" : "text-blue-600"}
+                      size={18}
+                    />
+                  ) : (
+                    <ImageIcon
+                      className={
+                        darkMode ? "text-purple-400" : "text-purple-600"
+                      }
+                      size={18}
+                    />
+                  )}
+                  <h3
+                    className={`font-semibold text-sm ${
+                      darkMode ? "text-white" : "text-gray-900"
+                    }`}
                   >
-                    <X size={20} />
-                  </button>
+                    {viewingImage.type === "explanation"
+                      ? "Explanation"
+                      : "Question"}{" "}
+                    Image {viewingImage.imageIndex + 1}
+                  </h3>
                 </div>
+                <button
+                  onClick={() => setViewingImage(null)}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    darkMode
+                      ? "bg-white/10 text-white hover:bg-white/20"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="flex items-center justify-center p-8 pt-20 pb-16">
+              <div
+                className={`flex items-center justify-center p-6 min-h-[300px] ${
+                  darkMode ? "bg-slate-950" : "bg-gray-50"
+                }`}
+              >
                 <img
                   src={viewingImage.url}
                   alt="Full size"
-                  className="max-w-full max-h-[75vh] object-contain rounded-lg"
+                  className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
                 />
               </div>
 
-              <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4">
-                <p className="text-gray-400 text-sm text-center">
+              {/* Footer */}
+              <div
+                className={`px-4 py-2.5 border-t ${
+                  darkMode
+                    ? "bg-black/40 border-slate-700"
+                    : "bg-gray-100 border-gray-200"
+                }`}
+              >
+                <p
+                  className={`text-xs text-center ${
+                    darkMode ? "text-slate-500" : "text-gray-500"
+                  }`}
+                >
                   Click outside to close
                 </p>
               </div>

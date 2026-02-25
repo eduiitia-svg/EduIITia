@@ -139,7 +139,7 @@ useEffect(() => {
           const updatedUser = { uid: userData.uid, ...freshUserData };
 
           dispatch(setUser(updatedUser));
-
+          
           const existingTimestamp = parsedUser.loginTimestamp || Date.now();
           localStorage.setItem("user", JSON.stringify({
             user: updatedUser,

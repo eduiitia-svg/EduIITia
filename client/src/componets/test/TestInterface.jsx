@@ -46,7 +46,7 @@ const TestInterface = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showPdfSidebar, setShowPdfSidebar] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const hasInitialized = useRef(false);
   const isChangingQuestion = useRef(false);
@@ -258,9 +258,7 @@ const TestInterface = () => {
                 </p>
                 <p className="mt-1 text-sm text-slate-300">
                   You have{" "}
-                  <span className="text-white font-bold">
-                    {markedQuestions.size}
-                  </span>{" "}
+                  <span className="stat-value">{markedQuestions.size}</span>{" "}
                   question(s) marked for review.
                 </p>
                 <p className="mt-2 text-xs text-slate-400">
@@ -627,7 +625,7 @@ const TestInterface = () => {
                   Previous
                 </button>
                 <button
-                  className="nav-btn next"
+                  className="nav-btn next "
                   onClick={() =>
                     setCurrentIndex((prev) =>
                       Math.min((totalQuestions || 15) - 1, prev + 1),

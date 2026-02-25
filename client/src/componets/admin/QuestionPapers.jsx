@@ -5,6 +5,7 @@ import {
   getAllQuestionPapersByCreator,
   deleteQuestionPaper as deleteQuestionPaperAction,
   deleteQuestionImage as deleteQuestionImageAction,
+  deleteExplanationImage as deleteExplanationImageAction,
 } from "../../slices/questionSlice";
 import EditQuestionModal from "./EditQuestionModal";
 import EditQuestionImages from "./EditQuestionImages";
@@ -128,16 +129,33 @@ const QuestionPapers = () => {
       }
     }
   };
-  const handleDeleteImage = async (paperId, questionIndex, imageIndex) => {
+
+  const handleDeleteImage = async (
+    paperId,
+    questionIndex,
+    imageIndex,
+    type = "question",
+  ) => {
     if (paperId && questionIndex !== null && imageIndex !== null) {
       try {
-        const result = await dispatch(
-          deleteQuestionImageAction({
-            testId: paperId,
-            questionIndex,
-            imageIndex,
-          }),
-        ).unwrap();
+        let result;
+        if (type === "explanation") {
+          result = await dispatch(
+            deleteExplanationImageAction({
+              testId: paperId,
+              questionIndex,
+              imageIndex,
+            }),
+          ).unwrap();
+        } else {
+          result = await dispatch(
+            deleteQuestionImageAction({
+              testId: paperId,
+              questionIndex,
+              imageIndex,
+            }),
+          ).unwrap();
+        }
         if (result.success) {
           toast.success("Image deleted successfully!");
           setViewingImage(null);
@@ -145,10 +163,10 @@ const QuestionPapers = () => {
         }
       } catch (error) {
         toast.error(error || "Failed to delete image");
-        console.error(error);
       }
     }
   };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -394,10 +412,57 @@ const QuestionPapers = () => {
                         <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                           {question.explanation}
                         </p>
+
+                        {question.explanationImages &&
+                          question.explanationImages.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-500/20">
+                              <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-1">
+                                <ImageIcon size={12} /> Explanation Media (
+                                {question.explanationImages.length})
+                              </p>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {question.explanationImages.map(
+                                  (imageUrl, imgIndex) => (
+                                    <div
+                                      key={imgIndex}
+                                      className="relative group/img overflow-hidden rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-100/50 dark:bg-black/30 aspect-square hover:border-blue-400 dark:hover:border-blue-400/50 transition-all cursor-pointer"
+                                      onClick={() =>
+                                        setViewingImage({
+                                          url: imageUrl,
+                                          paperId: selectedPaper.id,
+                                          questionIndex: index,
+                                          imageIndex: imgIndex,
+                                          type: "explanation",
+                                        })
+                                      }
+                                    >
+                                      <img
+                                        src={imageUrl}
+                                        alt={`Explanation ${index + 1} - Image ${imgIndex + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                        <div className="text-center">
+                                          <BookOpen
+                                            className="mx-auto mb-2 text-blue-400"
+                                            size={20}
+                                          />
+                                          <p className="text-xs text-white font-medium">
+                                            View
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
                 )}
+
                 <div className="flex flex-wrap items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-white/5 gap-4">
                   <div className="flex items-center space-x-6 text-xs text-gray-600 dark:text-gray-500">
                     <span className="flex items-center gap-1">
@@ -444,13 +509,14 @@ const QuestionPapers = () => {
             ))}
           </div>
         </div>
+
         <AnimatePresence>
           {viewingImage && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
               onClick={() => setViewingImage(null)}
             >
               <motion.div
@@ -458,50 +524,65 @@ const QuestionPapers = () => {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={{ type: "spring", damping: 25 }}
-                className="relative max-w-2xl w-full max-h-[90vh] bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl overflow-hidden"
+                className="relative max-w-2xl w-full max-h-[90vh] bg-white dark:bg-gray-900 border border-gray-300 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="absolute top-0 left-0 right-0 bg-linear-to-b from-black/80 to-transparent p-4 z-10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ImageIcon className="text-purple-400" size={20} />
-                      <h3 className="text-white font-semibold">
-                        Image {viewingImage.imageIndex + 1}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          handleDeleteImage(
-                            viewingImage.paperId,
-                            viewingImage.questionIndex,
-                            viewingImage.imageIndex,
-                          )
-                        }
-                        className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
-                        title="Delete Image"
-                      >
-                        <Trash size={18} />
-                      </button>
-                      <button
-                        onClick={() => setViewingImage(null)}
-                        className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-all"
-                        title="Close"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-black/60 border-b border-gray-200 dark:border-white/10">
+                  <div className="flex items-center gap-2">
+                    {viewingImage.type === "explanation" ? (
+                      <BookOpen
+                        className="text-blue-600 dark:text-blue-400"
+                        size={18}
+                      />
+                    ) : (
+                      <ImageIcon
+                        className="text-purple-600 dark:text-purple-400"
+                        size={18}
+                      />
+                    )}
+                    <h3 className="text-gray-900 dark:text-white font-semibold text-sm">
+                      {viewingImage.type === "explanation"
+                        ? "Explanation"
+                        : "Question"}{" "}
+                      Image {viewingImage.imageIndex + 1}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        handleDeleteImage(
+                          viewingImage.paperId,
+                          viewingImage.questionIndex,
+                          viewingImage.imageIndex,
+                          viewingImage.type || "question",
+                        )
+                      }
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-white transition-all border border-red-300 dark:border-red-500/30 text-xs font-medium"
+                      title="Delete Image"
+                    >
+                      <Trash size={14} />
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setViewingImage(null)}
+                      className="p-1.5 rounded-lg bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-white/20 transition-all"
+                      title="Close"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-center p-8 pt-20 pb-16">
+
+                <div className="flex items-center justify-center p-6 bg-gray-50 dark:bg-gray-950 min-h-[300px]">
                   <img
                     src={viewingImage.url}
                     alt="Full size"
-                    className="max-w-full max-h-[75vh] object-contain rounded-lg"
+                    className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
                   />
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4">
-                  <p className="text-gray-400 text-sm text-center">
+
+                <div className="px-4 py-2.5 bg-gray-100 dark:bg-black/40 border-t border-gray-200 dark:border-white/10">
+                  <p className="text-gray-500 dark:text-gray-500 text-xs text-center">
                     Click outside to close
                   </p>
                 </div>
@@ -509,6 +590,7 @@ const QuestionPapers = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
         {editingQuestion && (
           <EditQuestionModal
             paper={editingQuestion.paper}

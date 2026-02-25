@@ -10,6 +10,8 @@ import {
   deleteQuestion as deleteQuestionAction,
   deleteQuestionPaper as deleteQuestionPaperAction,
   clearPapers,
+  addExplanationImages,
+  deleteExplanationImage as deleteExplanationImageAction,
 } from "../slices/questionSlice";
 import {
   getTestAttemptsByAdmin,
@@ -21,11 +23,13 @@ const AdminContext = createContext();
 export const AdminProvider = ({ children }) => {
   const dispatch = useDispatch();
   const { papers: questionPapers, loading: papersLoading } = useSelector(
-    (state) => state.questions
+    (state) => state.questions,
   );
   const { user } = useSelector((state) => state.auth);
   const { testAttempts } = useSelector((state) => state.attempts);
-  const { categories, loading: categoriesLoading } = useSelector((state) => state.category);
+  const { categories, loading: categoriesLoading } = useSelector(
+    (state) => state.category,
+  );
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [filteredPapers, setFilteredPapers] = useState([]);
@@ -50,7 +54,7 @@ export const AdminProvider = ({ children }) => {
         dispatch(clearPapers());
         const [categoriesResult, papersResult] = await Promise.all([
           dispatch(getAllCategories()).unwrap(),
-          dispatch(getAllQuestionPapersByCreator()).unwrap()
+          dispatch(getAllQuestionPapersByCreator()).unwrap(),
         ]);
       } catch (error) {
         console.error("❌ Error loading admin data:", error);
@@ -85,7 +89,7 @@ export const AdminProvider = ({ children }) => {
   const fetchPapersByType = async (testType) => {
     try {
       const result = await dispatch(
-        getPapersByType({ testType, filterByCreator: true })
+        getPapersByType({ testType, filterByCreator: true }),
       ).unwrap();
       setFilteredPapers(result.data);
       return result.data;
@@ -121,6 +125,7 @@ export const AdminProvider = ({ children }) => {
           categoryName: data.get("categoryName"),
           subject: data.get("subject"),
           subcategory: data.get("subcategory") || null,
+          scheduledStartTime: data.get("scheduledStartTime") || null,
         };
       } else {
         payload = {
@@ -136,6 +141,7 @@ export const AdminProvider = ({ children }) => {
           categoryName: data.categoryName,
           subject: data.subject,
           subcategory: data.subcategory || null,
+          scheduledStartTime: data.scheduledStartTime || null,
         };
       }
       const result = await dispatch(uploadCSVQuestions(payload)).unwrap();
@@ -151,7 +157,7 @@ export const AdminProvider = ({ children }) => {
   const updateQuestion = async (testId, questionIndex, updates) => {
     try {
       const result = await dispatch(
-        updateSingleQuestion({ testId, questionIndex, updates })
+        updateSingleQuestion({ testId, questionIndex, updates }),
       ).unwrap();
       await fetchQuestionPapers();
       toast.success("Question updated successfully");
@@ -169,7 +175,7 @@ export const AdminProvider = ({ children }) => {
   }) => {
     try {
       const result = await dispatch(
-        addQuestionImages({ testId, questionIndex, imageFiles })
+        addQuestionImages({ testId, questionIndex, imageFiles }),
       ).unwrap();
       await fetchQuestionPapers();
       toast.success("Images added successfully");
@@ -183,7 +189,7 @@ export const AdminProvider = ({ children }) => {
   const deleteQuestionImage = async (testId, questionIndex, imageIndex) => {
     try {
       const result = await dispatch(
-        deleteImageAction({ testId, questionIndex, imageIndex })
+        deleteImageAction({ testId, questionIndex, imageIndex }),
       ).unwrap();
       await fetchQuestionPapers();
       toast.success("Image deleted successfully");
@@ -194,10 +200,49 @@ export const AdminProvider = ({ children }) => {
       throw error;
     }
   };
+
+  const addExplanationImagesHandler = async ({
+    testId,
+    questionIndex,
+    imageFiles,
+  }) => {
+    try {
+      const result = await dispatch(
+        addExplanationImages({ testId, questionIndex, imageFiles }),
+      ).unwrap();
+      await fetchQuestionPapers();
+      toast.success("Explanation images added successfully");
+      return result;
+    } catch (error) {
+      console.error("Error adding explanation images:", error);
+      toast.error("Failed to add explanation images");
+      throw error;
+    }
+  };
+
+  const deleteExplanationImageHandler = async (
+    testId,
+    questionIndex,
+    imageIndex,
+  ) => {
+    try {
+      const result = await dispatch(
+        deleteExplanationImageAction({ testId, questionIndex, imageIndex }),
+      ).unwrap();
+      await fetchQuestionPapers();
+      toast.success("Explanation image deleted successfully");
+      return result;
+    } catch (error) {
+      console.error("Error deleting explanation image:", error);
+      toast.error("Failed to delete explanation image");
+      throw error;
+    }
+  };
+
   const deleteQuestion = async (testId, questionIndex) => {
     try {
       const result = await dispatch(
-        deleteQuestionAction({ testId, questionIndex })
+        deleteQuestionAction({ testId, questionIndex }),
       ).unwrap();
       await fetchQuestionPapers();
       toast.success("Question deleted successfully");
@@ -225,7 +270,7 @@ export const AdminProvider = ({ children }) => {
       setFilteredPapers(questionPapers);
     } else {
       const filtered = questionPapers.filter(
-        (paper) => paper.testType === type
+        (paper) => paper.testType === type,
       );
       setFilteredPapers(filtered);
     }
@@ -235,7 +280,7 @@ export const AdminProvider = ({ children }) => {
       setFilteredPapers(questionPapers);
     } else {
       const filtered = questionPapers.filter(
-        (paper) => paper.categoryId === categoryId
+        (paper) => paper.categoryId === categoryId,
       );
       setFilteredPapers(filtered);
     }
@@ -245,12 +290,12 @@ export const AdminProvider = ({ children }) => {
       setFilteredPapers(questionPapers);
     } else if (subject === "all" || !subject) {
       const filtered = questionPapers.filter(
-        (paper) => paper.categoryId === categoryId
+        (paper) => paper.categoryId === categoryId,
       );
       setFilteredPapers(filtered);
     } else {
       const filtered = questionPapers.filter(
-        (paper) => paper.categoryId === categoryId && paper.subject === subject
+        (paper) => paper.categoryId === categoryId && paper.subject === subject,
       );
       setFilteredPapers(filtered);
     }
@@ -272,13 +317,15 @@ export const AdminProvider = ({ children }) => {
     fetchCategories,
     uploadCSV,
     updateQuestion,
-    addQuestionImages: addQuestionImagesHandler,
     deleteQuestionImage,
     deleteQuestion,
     deleteQuestionPaper,
     filterPapers,
     filterPapersByCategory,
     filterPapersByCategoryAndSubject,
+    addQuestionImages: addQuestionImagesHandler,
+    addExplanationImages: addExplanationImagesHandler,
+    deleteExplanationImage: deleteExplanationImageHandler,
   };
   return (
     <AdminContext.Provider value={value}>{children}</AdminContext.Provider>

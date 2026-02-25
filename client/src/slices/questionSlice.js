@@ -14,9 +14,10 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../config/firebase";
 import {
-  uploadCSVToCloudinary,
-  uploadMultipleToCloudinary,
-} from "../config/cloudinaryUpload";
+  uploadCSVToFirebase,
+  uploadMultipleToFirebase,
+} from "../config/firebaseUpload";
+
 export const uploadCSVQuestions = createAsyncThunk(
   "questions/uploadCSVQuestions",
   async (
@@ -33,6 +34,7 @@ export const uploadCSVQuestions = createAsyncThunk(
       categoryName,
       subject,
       subcategory,
+      scheduledStartTime,
     },
     { rejectWithValue },
   ) => {
@@ -42,9 +44,11 @@ export const uploadCSVQuestions = createAsyncThunk(
       if (!categoryId || !categoryName || !subject) {
         throw new Error("Category and subject are required");
       }
+
       let parsedQuestions = [];
       let csvUrl = null;
       let csvPublicId = null;
+
       if (uploadedViaAI && questions) {
         parsedQuestions = questions.map((q) => ({
           questionText: q.questionText || "",
@@ -60,22 +64,24 @@ export const uploadCSVQuestions = createAsyncThunk(
             }),
         }));
       } else {
-        if (!csvFile) {
-          throw new Error("CSV file is required");
-        }
-        const uploadResult = await uploadCSVToCloudinary(csvFile);
+        if (!csvFile) throw new Error("CSV file is required");
+
+        const uploadResult = await uploadCSVToFirebase(csvFile);
         csvUrl = uploadResult.url;
         csvPublicId = uploadResult.publicId;
+
         const csvText = await csvFile.text();
         const lines = csvText
           .split("\n")
           .map((line) => line.trim())
           .filter((line) => line.length > 0);
+
         if (lines.length < 2) {
           throw new Error(
             "CSV file appears empty or invalid. Please use AI Parser for better results.",
           );
         }
+
         const headers = lines[0].split(",").map((h) =>
           h
             .trim()
@@ -83,6 +89,7 @@ export const uploadCSVQuestions = createAsyncThunk(
             .replace(/[_\-\s]/g, "")
             .replace(/['"]/g, ""),
         );
+
         const findHeader = (possibleNames) => {
           for (let name of possibleNames) {
             const cleanName = name.toLowerCase().replace(/[_\-\s]/g, "");
@@ -91,6 +98,7 @@ export const uploadCSVQuestions = createAsyncThunk(
           }
           return -1;
         };
+
         const questionIndex = findHeader([
           "question",
           "questiontext",
@@ -147,6 +155,7 @@ export const uploadCSVQuestions = createAsyncThunk(
           "reasoning",
         ]);
         const imagesIndex = findHeader(["images", "image", "pics", "pictures"]);
+
         if (
           questionIndex === -1 ||
           optionAIndex === -1 ||
@@ -158,13 +167,16 @@ export const uploadCSVQuestions = createAsyncThunk(
             `Suggestion: Use AI Parser mode for automatic question extraction from any document format.`,
           );
         }
+
         let successCount = 0;
         let failedCount = 0;
+
         for (let i = 1; i < lines.length; i++) {
           try {
             const rowValues = [];
             let currentValue = "";
             let insideQuotes = false;
+
             for (let char of lines[i]) {
               if (char === '"') {
                 insideQuotes = !insideQuotes;
@@ -176,33 +188,36 @@ export const uploadCSVQuestions = createAsyncThunk(
               }
             }
             rowValues.push(currentValue.trim());
+
             const cleanedValues = rowValues.map((v) =>
               v.replace(/^["']|["']$/g, "").trim(),
             );
+
             const questionText = cleanedValues[questionIndex] || "";
             const optionA = cleanedValues[optionAIndex] || "";
             const optionB = cleanedValues[optionBIndex] || "";
             const optionC = cleanedValues[optionCIndex] || "";
             const optionD = cleanedValues[optionDIndex] || "";
+
             if (!questionText || !optionA || !optionB || !optionC || !optionD) {
-              console.warn(`Row ${i + 1}: Missing required fields, skipping`);
               failedCount++;
               continue;
             }
+
             let correctAnswer = "";
             if (answerIndex !== -1) {
               const answerValue = cleanedValues[answerIndex]
                 .trim()
                 .toUpperCase();
-              if (answerValue === "A" || answerValue === "1") {
+              if (answerValue === "A" || answerValue === "1")
                 correctAnswer = optionA;
-              } else if (answerValue === "B" || answerValue === "2") {
+              else if (answerValue === "B" || answerValue === "2")
                 correctAnswer = optionB;
-              } else if (answerValue === "C" || answerValue === "3") {
+              else if (answerValue === "C" || answerValue === "3")
                 correctAnswer = optionC;
-              } else if (answerValue === "D" || answerValue === "4") {
+              else if (answerValue === "D" || answerValue === "4")
                 correctAnswer = optionD;
-              } else {
+              else {
                 const allOptions = [optionA, optionB, optionC, optionD];
                 const matchedOption = allOptions.find(
                   (opt) =>
@@ -214,6 +229,7 @@ export const uploadCSVQuestions = createAsyncThunk(
             } else {
               correctAnswer = optionA;
             }
+
             const questionLevel =
               levelIndex !== -1
                 ? cleanedValues[levelIndex] || "Medium"
@@ -227,55 +243,56 @@ export const uploadCSVQuestions = createAsyncThunk(
                 : [];
             const explanation =
               explanationIndex !== -1 ? cleanedValues[explanationIndex] : null;
+
             const questionData = {
-              questionText: questionText,
+              questionText,
               options: [optionA, optionB, optionC, optionD].filter(
                 (opt) => opt !== undefined && opt !== null && opt !== "",
               ),
               images,
-              correctAnswer: correctAnswer,
-              questionLevel: questionLevel,
+              correctAnswer,
+              questionLevel,
             };
+
             if (explanation && explanation.trim() !== "") {
               questionData.explanation = explanation.trim();
             }
+
             parsedQuestions.push(questionData);
             successCount++;
           } catch (rowError) {
-            console.warn(`Error parsing row ${i + 1}:`, rowError.message);
             failedCount++;
           }
         }
+
         if (failedCount > successCount || parsedQuestions.length === 0) {
           throw new Error(
-            ` Recommended Solution: Use AI Parser mode for automatic question extraction.
-              AI Parser supports: CSV formats.`,
+            `Recommended Solution: Use AI Parser mode for automatic question extraction.`,
           );
         }
       }
+
       if (parsedQuestions.length === 0) {
-        throw new Error(`Recommended Solution: Please use AI Parser mode .`);
+        throw new Error(`Recommended Solution: Please use AI Parser mode.`);
       }
+
       const userDoc = await getDoc(doc(db, "users", userId));
       let categoryType = null;
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-
         if (
           userData.role === "admin" &&
           userData.teacherSubscription?.isActive
         ) {
           const mainCat = userData.teacherSubscription.mainCategory;
-
           const categoryTypeMap = {
             school: "School",
             entrance: "Entrance",
             recruitment: "Recruitment",
           };
-
-          categoryType = categoryTypeMap[mainCat] || mainCat || null
-        } else if (userDoc.data().role === "superadmin") {
+          categoryType = categoryTypeMap[mainCat] || mainCat || null;
+        } else if (userData.role === "superadmin") {
           const categoryRef = doc(db, "categories", categoryId);
           const categorySnap = await getDoc(categoryRef);
           if (categorySnap.exists()) {
@@ -298,45 +315,32 @@ export const uploadCSVQuestions = createAsyncThunk(
         createdBy: userId,
         uploadedViaAI: uploadedViaAI || false,
         createdAt: serverTimestamp(),
+        scheduledStartTime: scheduledStartTime
+          ? new Date(scheduledStartTime).toISOString()
+          : null,
       };
-      if (subcategory) {
-        questionSetData.subcategory = subcategory;
-      }
-      if (csvUrl) {
-        questionSetData.csvFileUrl = csvUrl;
-      }
-      if (csvPublicId) {
-        questionSetData.csvPublicId = csvPublicId;
-      }
+
+      if (subcategory) questionSetData.subcategory = subcategory;
+      if (csvUrl) questionSetData.csvFileUrl = csvUrl;
+      if (csvPublicId) questionSetData.csvPublicId = csvPublicId;
+
       const docRef = await addDoc(collection(db, "questions"), questionSetData);
+
       return {
         success: true,
         message: uploadedViaAI
           ? `AI-parsed questions uploaded successfully! ${parsedQuestions.length} questions added.`
           : `CSV uploaded successfully! ${parsedQuestions.length} questions added.`,
-        cloudinaryFile: csvUrl,
-        data: {
-          id: docRef.id,
-          ...questionSetData,
-        },
+        data: { id: docRef.id, ...questionSetData },
       };
     } catch (error) {
-      let errorMessage = error.message;
-      if (
-        errorMessage.includes("Cannot detect") ||
-        errorMessage.includes("format parsing failed") ||
-        errorMessage.includes("No valid questions")
-      ) {
-        return rejectWithValue(errorMessage);
-      } else {
-        return rejectWithValue(
-          `${errorMessage}
-            Having trouble with CSV format? Try using AI Parser mode for automatic question extraction from any document!`,
-        );
-      }
+      return rejectWithValue(
+        `${error.message}\nHaving trouble with CSV format? Try using AI Parser mode!`,
+      );
     }
   },
 );
+
 export const uploadAIParsedQuestions = createAsyncThunk(
   "questions/uploadAIParsedQuestions",
   async (
@@ -448,9 +452,8 @@ export const addQuestionImages = createAsyncThunk(
       if (questionIndex < 0 || questionIndex >= questions.length) {
         throw new Error("Question not found");
       }
-      const uploadResults = await uploadMultipleToCloudinary(filesArray, {
+      const uploadResults = await uploadMultipleToFirebase(filesArray, {
         folder: "questionImages",
-        resourceType: "image",
       });
       const imageUrls = uploadResults.map((r) => r.url);
       questions[questionIndex].images = [
@@ -509,6 +512,77 @@ export const deleteQuestionImage = createAsyncThunk(
     }
   },
 );
+
+export const addExplanationImages = createAsyncThunk(
+  "questions/addExplanationImages",
+  async ({ testId, questionIndex, imageFiles }, { rejectWithValue }) => {
+    try {
+      const filesArray = imageFiles.getAll("file");
+      if (!filesArray || filesArray.length === 0) {
+        throw new Error("No image files provided");
+      }
+      const testRef = doc(db, "questions", testId);
+      const testDoc = await getDoc(testRef);
+      if (!testDoc.exists()) throw new Error("Test not found");
+      const testData = testDoc.data();
+      const questions = testData.questions || [];
+      if (questionIndex < 0 || questionIndex >= questions.length) {
+        throw new Error("Question not found");
+      }
+      const uploadResults = await uploadMultipleToFirebase(filesArray, {
+        folder: "explanationImages",
+      });
+      const imageUrls = uploadResults.map((r) => r.url);
+      questions[questionIndex].explanationImages = [
+        ...(questions[questionIndex].explanationImages || []),
+        ...imageUrls,
+      ];
+      await updateDoc(testRef, { questions });
+      return {
+        success: true,
+        message: "Explanation images added successfully",
+        data: questions[questionIndex],
+      };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+export const deleteExplanationImage = createAsyncThunk(
+  "questions/deleteExplanationImage",
+  async ({ testId, questionIndex, imageIndex }, { rejectWithValue }) => {
+    try {
+      const testRef = doc(db, "questions", testId);
+      const testDoc = await getDoc(testRef);
+      if (!testDoc.exists()) throw new Error("Test not found");
+      const testData = testDoc.data();
+      const questions = testData.questions || [];
+      if (questionIndex < 0 || questionIndex >= questions.length) {
+        throw new Error("Question not found");
+      }
+      const question = questions[questionIndex];
+      if (
+        !question.explanationImages ||
+        imageIndex < 0 ||
+        imageIndex >= question.explanationImages.length
+      ) {
+        throw new Error("Image not found");
+      }
+      question.explanationImages.splice(imageIndex, 1);
+      questions[questionIndex] = question;
+      await updateDoc(testRef, { questions });
+      return {
+        success: true,
+        message: "Explanation image deleted successfully",
+        data: { testId, questionIndex, imageIndex, updatedQuestion: question },
+      };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
 export const deleteQuestion = createAsyncThunk(
   "questions/deleteQuestion",
   async ({ testId, questionIndex }, { rejectWithValue }) => {
@@ -953,6 +1027,17 @@ const questionSlice = createSlice({
         );
       })
       .addCase(deleteQuestionPaper.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteExplanationImage.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteExplanationImage.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(deleteExplanationImage.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

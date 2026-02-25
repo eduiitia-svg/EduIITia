@@ -13,7 +13,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, auth } from "../config/firebase";
-import { uploadToCloudinary } from "../config/cloudinaryUpload";
+import { uploadToFirebase } from "../config/firebaseUpload";
 
 const getAllowedCreatorIds = async (userId) => {
   try {
@@ -48,43 +48,22 @@ const getAllowedCreatorIds = async (userId) => {
 export const uploadStudyMaterial = createAsyncThunk(
   "studyMaterial/upload",
   async (
-    {
-      categoryId,
-      categoryName,
-      subject,
-      subcategory,
-      title,
-      description,
-      file,
-      isDemo = false,
-    },
+    { categoryId, categoryName, subject, subcategory, title, description, file, isDemo = false },
     { rejectWithValue, dispatch }
   ) => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) throw new Error("User not authenticated");
 
-      let resourceType = "auto";
-      if (file.type.startsWith("image/")) {
-        resourceType = "image";
-      } else if (file.type.startsWith("video/")) {
-        resourceType = "video";
-      } else {
-        resourceType = "raw";
-      }
-
-      const cloudinaryResult = await uploadToCloudinary(file, {
+      const firebaseResult = await uploadToFirebase(file, {
         folder: "study-materials",
-        resourceType,
         onProgress: (progress) => {
           dispatch(setUploadProgress(progress));
         },
       });
 
-      console.log("Cloudinary Result:", cloudinaryResult);
-
-      if (!cloudinaryResult.success) {
-        throw new Error("Failed to upload file to Cloudinary");
+      if (!firebaseResult.success) {
+        throw new Error("Failed to upload file to Firebase Storage");
       }
 
       const materialData = {
@@ -94,23 +73,20 @@ export const uploadStudyMaterial = createAsyncThunk(
         subcategory: subcategory || null,
         title: title.trim(),
         description: description.trim(),
-        fileUrl: cloudinaryResult.url,
+        fileUrl: firebaseResult.url,
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
-        cloudinaryPublicId: cloudinaryResult.publicId,
-        cloudinaryFormat: cloudinaryResult.format ?? null,
-        cloudinaryResourceType: cloudinaryResult.resourceType ?? null,
-        isDemo: isDemo,
+        firebaseStoragePath: firebaseResult.publicId,
+        cloudinaryFormat: firebaseResult.format ?? null,
+        cloudinaryResourceType: firebaseResult.resourceType ?? null,
+        isDemo,
         createdBy: userId,
         createdAt: serverTimestamp(),
         isActive: true,
       };
 
-      const docRef = await addDoc(
-        collection(db, "studyMaterials"),
-        materialData
-      );
+      const docRef = await addDoc(collection(db, "studyMaterials"), materialData);
 
       return {
         id: docRef.id,
@@ -123,7 +99,6 @@ export const uploadStudyMaterial = createAsyncThunk(
     }
   }
 );
-
 export const getAllStudyMaterialsByCreator = createAsyncThunk(
   "studyMaterial/getAllByCreator",
   async (_, { rejectWithValue }) => {

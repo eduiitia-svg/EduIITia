@@ -23,9 +23,9 @@ import {
 } from "firebase/firestore";
 
 import { auth, db } from "../config/firebase";
-import { uploadToCloudinary } from "../config/cloudinaryUpload";
 import { clearPapers } from "./questionSlice";
 import { clearAttempts } from "./attemptSlice";
+import { uploadToFirebase } from "../config/firebaseUpload";
 
 const createUserDocument = async (user, additionalData = {}) => {
   const userRef = doc(db, "users", user.uid);
@@ -250,61 +250,20 @@ export const updateProfile = createAsyncThunk(
       const updates = { updatedAt: serverTimestamp() };
 
       if (avatar instanceof File) {
-        const formData = new FormData();
-        formData.append("file", avatar);
-        formData.append(
-          "upload_preset",
-          import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
-        );
-        formData.append("folder", `user_avatars/${userId}`);
-
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${
-            import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-          }/image/upload`,
-          {
-            method: "POST",
-            body: formData,
-          },
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to upload avatar");
-        }
-
-        const cloudinaryResponse = await response.json();
-        updates.avatar = cloudinaryResponse.secure_url;
-
+        const result = await uploadToFirebase(avatar, {
+          folder: `user_avatars/${userId}`,
+        });
+        updates.avatar = result.url;
         await firebaseUpdateProfile(auth.currentUser, {
-          photoURL: cloudinaryResponse.secure_url,
+          photoURL: result.url,
         });
       }
 
       if (coverImage instanceof File) {
-        const formData = new FormData();
-        formData.append("file", coverImage);
-        formData.append(
-          "upload_preset",
-          import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
-        );
-        formData.append("folder", `user_covers/${userId}`);
-
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${
-            import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-          }/image/upload`,
-          {
-            method: "POST",
-            body: formData,
-          },
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to upload cover image");
-        }
-
-        const cloudinaryResponse = await response.json();
-        updates.coverImage = cloudinaryResponse.secure_url;
+        const result = await uploadToFirebase(coverImage, {
+          folder: `user_covers/${userId}`,
+        });
+        updates.coverImage = result.url;
       }
 
       if (name) {
@@ -334,8 +293,6 @@ export const logout = createAsyncThunk(
   async (_, { dispatch, rejectWithValue }) => {
     try {
       await signOut(auth);
-
-      // ✅ Clear all user-specific data
       dispatch(clearPapers());
       dispatch(clearAttempts());
 

@@ -7,16 +7,18 @@ import {
   AlertTriangle,
   XCircle,
   ArrowRightCircle,
+  Loader2,
 } from "lucide-react";
 
 const InstructionModal = ({ test, onCancel, onConfirm }) => {
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const emeraldGradient = "bg-gradient-to-r from-emerald-400 to-teal-500";
-  const darkBg = "bg-[#0A0A0A]";
-  const darkBorder = "border-emerald-500/30";
-  const textColor = "text-gray-300";
-  const headerColor = "text-emerald-400";
+  const handleConfirm = async () => {
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 dark:bg-black/70 backdrop-blur-md p-4">
@@ -117,15 +119,23 @@ const InstructionModal = ({ test, onCancel, onConfirm }) => {
             <XCircle className="w-5 h-5" /> Cancel
           </button>
           <button
-            onClick={onConfirm}
-            disabled={!agreed}
+            onClick={handleConfirm}
+            disabled={!agreed || loading}
             className={`px-8 py-2.5 cursor-pointer rounded-xl font-bold transition flex items-center justify-center gap-2 ${
-              agreed
+              agreed && !loading
                 ? "bg-linear-to-r from-emerald-500 dark:from-emerald-400 to-teal-600 dark:to-teal-500 text-white dark:text-black hover:shadow-[0_0_25px_rgba(52,211,153,0.5)] transform hover:scale-[1.02]"
                 : "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed border border-gray-300 dark:border-gray-600"
             }`}
           >
-            Start Test <ArrowRightCircle className="w-5 h-5" />
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" /> Starting...
+              </>
+            ) : (
+              <>
+                Start Test <ArrowRightCircle className="w-5 h-5" />
+              </>
+            )}
           </button>
         </div>
       </motion.div>

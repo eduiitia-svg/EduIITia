@@ -143,6 +143,15 @@ export const Pricing = () => {
               localStorage.setItem("user", JSON.stringify(updatedUser));
               await dispatch(getSubscriptionStatus(user.uid));
               toast.success("Payment verified successfully!");
+              setTimeout(() => {
+                const testSection = document.getElementById("test");
+                if (testSection) {
+                  testSection.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                }
+              }, 1000);
             }
             setActivating(null);
           } catch (error) {
@@ -503,5 +512,3 @@ export const Pricing = () => {
     </div>
   );
 };
-
-

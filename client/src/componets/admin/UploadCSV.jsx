@@ -47,6 +47,7 @@ const UploadCSV = () => {
     title: "",
     instructions: "",
     makeTime: "",
+    scheduledStartTime: "",
   });
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -535,6 +536,7 @@ const UploadCSV = () => {
       instructions: "",
       makeTime: "",
       testType: "multiple_choice",
+      scheduledStartTime: "",
     });
     setFile(null);
     setSelectedCategoryId("");
@@ -621,6 +623,10 @@ const UploadCSV = () => {
         submitData.append("subcategory", selectedSubcategory);
       }
 
+      if (formData.scheduledStartTime) {
+        submitData.append("scheduledStartTime", formData.scheduledStartTime);
+      }
+
       await uploadCSV(submitData);
       await fetchQuestionPapers();
 
@@ -680,6 +686,9 @@ const UploadCSV = () => {
         categoryId: selectedCategoryId,
         categoryName: selectedCat?.name || "",
         subject: selectedSubject,
+        ...(formData.scheduledStartTime && {
+          scheduledStartTime: formData.scheduledStartTime,
+        }),
       };
 
       if (selectedSubcategory) {
@@ -1046,6 +1055,22 @@ const UploadCSV = () => {
             </div>
           </div>
 
+          <div>
+            <label className={labelClasses}>
+              <Clock size={14} className="inline mr-2" /> Scheduled Start Time
+            </label>
+            <input
+              type="datetime-local"
+              name="scheduledStartTime"
+              value={formData.scheduledStartTime}
+              onChange={handleInputChange}
+              className={inputClasses}
+            />
+            <p className="text-xs text-gray-600 dark:text-gray-500 mt-1 ml-1">
+              Leave empty to make available immediately
+            </p>
+          </div>
+
           <div className="mb-8">
             <label className={labelClasses}>
               {uploadMode === "csv"
@@ -1263,7 +1288,7 @@ const UploadCSV = () => {
                       </div>
                     </div>
                   ))}
-                  
+
                   {q.explanation && (
                     <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
                       <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1 flex items-center gap-1">

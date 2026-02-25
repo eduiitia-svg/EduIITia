@@ -60,7 +60,7 @@ export const getTestHistory = createAsyncThunk(
         const q = query(
           attemptsRef,
           where("userId", "==", userId),
-          where("testType", "==", testType)
+          where("testType", "==", testType),
         );
         querySnapshot = await getDocs(q);
       } else {
@@ -103,16 +103,21 @@ export const getTestHistory = createAsyncThunk(
             isAttempted: !!answer,
             options: fullQuestion.options || [],
             images: fullQuestion.images || [],
+            explanationImages: fullQuestion.explanationImages || [],
             explanation: fullQuestion.explanation || "",
             questionLevel: fullQuestion.questionLevel || "Medium",
           };
         });
 
-        const actualCorrectAnswers = questions.filter((q) => q.isCorrect).length;
-        const actualIncorrectAnswers = questions.filter(
-          (q) => q.isAttempted && !q.isCorrect
+        const actualCorrectAnswers = questions.filter(
+          (q) => q.isCorrect,
         ).length;
-        const actualSkippedAnswers = questions.filter((q) => !q.isAttempted).length;
+        const actualIncorrectAnswers = questions.filter(
+          (q) => q.isAttempted && !q.isCorrect,
+        ).length;
+        const actualSkippedAnswers = questions.filter(
+          (q) => !q.isAttempted,
+        ).length;
 
         history.push({
           attemptId: docSnapshot.id,
@@ -121,9 +126,9 @@ export const getTestHistory = createAsyncThunk(
           startedAt: data.startedAt,
           submittedAt: data.submittedAt || null,
           score: data.score || 0,
-          totalQuestions: questions.length, 
-          correctAnswers: actualCorrectAnswers, 
-          incorrectAnswers: actualIncorrectAnswers, 
+          totalQuestions: questions.length,
+          correctAnswers: actualCorrectAnswers,
+          incorrectAnswers: actualIncorrectAnswers,
           skippedAnswers: actualSkippedAnswers,
           markingScheme: "+4 for correct, -1 for wrong",
           timeSpent: data.timeSpent || 0,
@@ -146,7 +151,7 @@ export const getTestHistory = createAsyncThunk(
       console.error("❌ Test history error:", error);
       return rejectWithValue(error.message || "Failed to fetch test history");
     }
-  }
+  },
 );
 
 export const getPerformanceOverview = createAsyncThunk(
@@ -200,10 +205,10 @@ export const getPerformanceOverview = createAsyncThunk(
     } catch (error) {
       console.error("❌ Performance overview error:", error);
       return rejectWithValue(
-        error.message || "Failed to fetch performance data"
+        error.message || "Failed to fetch performance data",
       );
     }
-  }
+  },
 );
 
 export const getTestAttempts = createAsyncThunk(
@@ -219,14 +224,14 @@ export const getTestAttempts = createAsyncThunk(
           where("userId", "==", userId),
           where("testType", "==", testType),
           where("submittedAt", "!=", null),
-          orderBy("submittedAt", "desc")
+          orderBy("submittedAt", "desc"),
         );
       } else {
         q = query(
           attemptsRef,
           where("userId", "==", userId),
           where("submittedAt", "!=", null),
-          orderBy("submittedAt", "desc")
+          orderBy("submittedAt", "desc"),
         );
       }
 
@@ -245,7 +250,7 @@ export const getTestAttempts = createAsyncThunk(
         if (attemptData.testId) {
           try {
             const testDoc = await getDoc(
-              doc(db, "questions", attemptData.testId)
+              doc(db, "questions", attemptData.testId),
             );
             if (testDoc.exists()) {
               const testData = testDoc.data();
@@ -282,7 +287,7 @@ export const getTestAttempts = createAsyncThunk(
       console.error("❌ Error fetching test attempts:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const getTestAttemptById = createAsyncThunk(
@@ -328,6 +333,7 @@ export const getTestAttemptById = createAsyncThunk(
           isAttempted: !!answer,
           options: fullQuestion.options || [],
           images: fullQuestion.images || [],
+          explanationImages: fullQuestion.explanationImages || [],
           explanation: fullQuestion.explanation || "",
           questionLevel: fullQuestion.questionLevel || "Medium",
         };
@@ -335,9 +341,11 @@ export const getTestAttemptById = createAsyncThunk(
 
       const actualCorrectAnswers = questions.filter((q) => q.isCorrect).length;
       const actualIncorrectAnswers = questions.filter(
-        (q) => q.isAttempted && !q.isCorrect
+        (q) => q.isAttempted && !q.isCorrect,
       ).length;
-      const actualSkippedAnswers = questions.filter((q) => !q.isAttempted).length;
+      const actualSkippedAnswers = questions.filter(
+        (q) => !q.isAttempted,
+      ).length;
 
       return {
         attemptId: attemptDoc.id,
@@ -346,10 +354,10 @@ export const getTestAttemptById = createAsyncThunk(
         startedAt: data.startedAt,
         submittedAt: data.submittedAt || null,
         score: data.score || 0,
-        totalQuestions: questions.length, 
-        correctAnswers: actualCorrectAnswers, 
-        incorrectAnswers: actualIncorrectAnswers, 
-        skippedAnswers: actualSkippedAnswers, 
+        totalQuestions: questions.length,
+        correctAnswers: actualCorrectAnswers,
+        incorrectAnswers: actualIncorrectAnswers,
+        skippedAnswers: actualSkippedAnswers,
         markingScheme: "+4 for correct, -1 for wrong",
         timeSpent: data.timeSpent || 0,
         questions: questions,
@@ -358,7 +366,7 @@ export const getTestAttemptById = createAsyncThunk(
       console.error("❌ Get test attempt by ID error:", error);
       return rejectWithValue(error.message || "Failed to fetch test attempt");
     }
-  }
+  },
 );
 
 export const getProgressOverTime = createAsyncThunk(
@@ -370,7 +378,7 @@ export const getProgressOverTime = createAsyncThunk(
         attemptsRef,
         where("userId", "==", userId),
         where("submittedAt", "!=", null),
-        orderBy("submittedAt", "asc")
+        orderBy("submittedAt", "asc"),
       );
 
       if (testType && testType !== "all") {
@@ -379,7 +387,7 @@ export const getProgressOverTime = createAsyncThunk(
           where("userId", "==", userId),
           where("testType", "==", testType),
           where("submittedAt", "!=", null),
-          orderBy("submittedAt", "asc")
+          orderBy("submittedAt", "asc"),
         );
       }
 
@@ -413,7 +421,7 @@ export const getProgressOverTime = createAsyncThunk(
           accuracy:
             attempt.totalQuestions > 0
               ? Math.round(
-                  (attempt.correctAnswers / attempt.totalQuestions) * 100
+                  (attempt.correctAnswers / attempt.totalQuestions) * 100,
                 )
               : 0,
           improvement,
@@ -442,7 +450,7 @@ export const getProgressOverTime = createAsyncThunk(
       console.error("❌ Progress over time error:", error);
       return rejectWithValue(error.message || "Failed to fetch progress data");
     }
-  }
+  },
 );
 
 export const getTestComparison = createAsyncThunk(
@@ -521,7 +529,7 @@ export const getTestComparison = createAsyncThunk(
         const difference = userScore - avgScore;
 
         const testType = Object.keys(userStatsMap).find(
-          (type) => type.toLowerCase().replace(/\s+/g, "_") === key
+          (type) => type.toLowerCase().replace(/\s+/g, "_") === key,
         );
 
         if (difference > 10) strengths.push(testType);
@@ -549,10 +557,10 @@ export const getTestComparison = createAsyncThunk(
     } catch (error) {
       console.error("❌ Test comparison error:", error);
       return rejectWithValue(
-        error.message || "Failed to fetch comparison data"
+        error.message || "Failed to fetch comparison data",
       );
     }
-  }
+  },
 );
 
 const dashboardSlice = createSlice({

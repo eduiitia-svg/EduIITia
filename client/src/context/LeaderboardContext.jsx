@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { getAllTestAttempts, getAttemptsByTest } from "../slices/attemptSlice";
@@ -12,6 +18,7 @@ export const LeaderboardProvider = ({ children }) => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [stats, setStats] = useState(null);
   const fetchTests = async () => {
+
     if (!user || !user.uid) {
       return;
     }
@@ -21,19 +28,19 @@ export const LeaderboardProvider = ({ children }) => {
     try {
       const result = await dispatch(getAllTestAttempts()).unwrap();
       setTests(result);
-      const testsWithAttempts = result.filter(t => t.hasAttempts);
+      const testsWithAttempts = result.filter((t) => t.hasAttempts);
       if (testsWithAttempts.length > 0) {
         setSelectedTest(testsWithAttempts[0]);
+      } else {
+        toast.error("No tests with attempts found");
       }
     } catch (err) {
-      console.error("❌ Failed test fetch:", err);
-      toast.error("Failed to load tests");
+      toast.error("Failed test fetching");
     }
   };
+
   const fetchLeaderboard = async (testId) => {
-    if (!testId) {
-      return;
-    }
+    if (!testId) return;
     try {
       const result = await dispatch(getAttemptsByTest(testId)).unwrap();
       if (!result.data || result.data.length === 0) {
@@ -41,11 +48,14 @@ export const LeaderboardProvider = ({ children }) => {
         setSelectedTest((prev) => ({
           ...prev,
           totalParticipants: 0,
+          userHasAttempted: false,
         }));
         return;
       }
+
       const leaderboardData = result.data.map((attempt, index) => {
-        const isCurrentUser = user?.uid === attempt.user._id;
+        const isCurrentUser =
+          user?.uid === attempt.user._id || user?.uid === attempt.userId;
         return {
           rank: index + 1,
           userId: attempt.user._id,
@@ -53,30 +63,44 @@ export const LeaderboardProvider = ({ children }) => {
           email: attempt.user.email,
           score: attempt.score,
           submittedAt: attempt.submittedAt,
-          isCurrentUser: isCurrentUser,
+          isCurrentUser,
         };
       });
-      const currentUserEntry = leaderboardData.find(entry => entry.isCurrentUser);
+
+      const userIsInLeaderboard = leaderboardData.some(
+        (entry) => entry.isCurrentUser,
+      );
+
       setLeaderboard(leaderboardData);
       setSelectedTest((prev) => ({
         ...prev,
         totalParticipants: leaderboardData.length,
+        userHasAttempted: userIsInLeaderboard,
       }));
     } catch (error) {
       console.error("❌ Error fetching leaderboard:", error);
       toast.error("Failed to load leaderboard");
       setLeaderboard([]);
-      setSelectedTest((prev) => ({
-        ...prev,
-        totalParticipants: 0,
-      }));
     }
   };
+
+  const prevTestIdRef = useRef(null);
+
+  useEffect(() => {
+    if (
+      selectedTest?.testId &&
+      selectedTest.hasAttempts &&
+      selectedTest.testId !== prevTestIdRef.current
+    ) {
+      prevTestIdRef.current = selectedTest.testId;
+      fetchLeaderboard(selectedTest.testId);
+    }
+  }, [selectedTest?.testId]);
   const fetchUserStats = async () => {
     try {
       if (user && leaderboard.length > 0) {
         const userAttempts = leaderboard.filter(
-          (entry) => entry.userId === user.uid
+          (entry) => entry.userId === user.uid,
         );
         setStats({
           totalAttempts: userAttempts.length,
@@ -98,7 +122,7 @@ export const LeaderboardProvider = ({ children }) => {
   const handleTestSelect = (test) => {
     if (!test.hasAttempts) {
       toast.info(
-        "No attempts found for this test. Be the first to attempt it!"
+        "No attempts found for this test. Be the first to attempt it!",
       );
       return;
     }
@@ -116,11 +140,7 @@ export const LeaderboardProvider = ({ children }) => {
     }
     fetchTests();
   }, [user]);
-  useEffect(() => {
-    if (selectedTest && selectedTest.hasAttempts && selectedTest.testId) {
-      fetchLeaderboard(selectedTest.testId);
-    }
-  }, [selectedTest?.testId]);
+
   useEffect(() => {
     if (leaderboard.length > 0) {
       fetchUserStats();

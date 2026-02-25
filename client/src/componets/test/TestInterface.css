@@ -472,6 +472,7 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden; 
 }
 
 .question-header {
@@ -545,8 +546,8 @@ body {
   flex: 1;
   overflow-y: auto;
   padding-right: 10px;
+  min-height: 0; 
 }
-
 .question-content p {
   font-size: 1.1rem;
   line-height: 1.6;
@@ -571,7 +572,7 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   align-items: start;
-  max-height: 60vh; 
+  max-height: none;  
 }
 
 .question-text-section {
@@ -588,8 +589,8 @@ body {
 
 .question-images-section {
   flex: 1;
-  max-height: 50vh; 
-  overflow-y: auto; 
+  max-height: 220px; 
+  overflow-y: auto;
 }
 
 .images-grid {
@@ -618,7 +619,7 @@ body {
 .question-image {
   width: 100%;
   height: auto;
-  max-height: 250px; 
+  max-height: 150px; 
   object-fit: contain;
   border-radius: 4px;
   display: block;
@@ -682,6 +683,15 @@ body {
   background: rgba(0, 0, 0, 0.08);
 }
 
+.light-mode .nav-btn.next {
+  color: #ffffff;
+}
+
+.light-mode .nav-btn.next:hover:not(:disabled) {
+  color: #ffffff;
+}
+
+
 .option.selected .option-label {
   background: var(--primary-accent);
   color: #fff;
@@ -695,14 +705,14 @@ body {
 
 .question-navigation {
   display: flex;
-  justify-content: flex-end; 
+  justify-content: flex-end;
   gap: 15px;
   margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid var(--glass-border);
   transition: border-color 0.3s ease;
+  flex-shrink: 0; 
 }
-
 .nav-btn {
   background: transparent;
   border: 1px solid var(--glass-border);
@@ -722,13 +732,14 @@ body {
 
 .nav-btn.next {
   background: var(--primary-accent);
-  color: #fff;
+  color: #1e293b; 
   border-color: var(--primary-accent);
   font-weight: 600;
 }
 
 .nav-btn.next:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.85;
+  color: #1e293b;  
   box-shadow: 0 0 15px var(--primary-glow);
 }
 
@@ -795,6 +806,10 @@ body {
   transition: color 0.3s ease;
 }
 
+.light-mode .stat-value {
+  color: #1e293b !important;
+}
+
 .stat-label {
   font-size: 0.85rem;
   color: var(--text-muted);
@@ -807,12 +822,12 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
 }
 
 .light-mode .warning-modal,
@@ -821,18 +836,15 @@ body {
 }
 
 .warning-content, .success-popup {
-  background: #0a0f18;
+  background: var(--bg-panel);
   border: 1px solid var(--glass-border);
   padding: 40px;
   border-radius: 20px;
   text-align: center;
-  max-width: 400px;
+  max-width: 420px;
+  width: 90%;
   box-shadow: 0 0 40px var(--primary-glow);
-  position: relative;
-  overflow: hidden;
-  transition: background 0.3s ease, border-color 0.3s ease;
 }
-
 .light-mode .warning-content,
 .light-mode .success-popup {
   background: #ffffff;
@@ -852,6 +864,20 @@ body {
   filter: blur(100px);
   opacity: 0.2;
   pointer-events: none;
+}
+
+.warning-content h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+
+.warning-content p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 24px;
 }
 
 .popup-icon .checkmark {
@@ -881,17 +907,16 @@ body {
 .popup-button, .warning-content button {
   background: var(--gradient-btn);
   border: none;
-  padding: 12px 30px;
+  padding: 12px 32px;
   border-radius: 30px;
-  color: #fff;
-  font-weight: 600;
+  color: #1e293b;
+  font-weight: 700;
   cursor: pointer;
   font-size: 1rem;
   transition: transform 0.2s, box-shadow 0.2s;
 }
-
 .popup-button:hover, .warning-content button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 0 20px var(--primary-glow);
 }
 

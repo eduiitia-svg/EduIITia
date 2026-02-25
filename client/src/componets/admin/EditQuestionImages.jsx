@@ -9,13 +9,15 @@ import {
   CheckCircle,
   Trash2,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 
 const EditQuestionImages = ({ paper, questionIndex, onClose }) => {
-  const { addQuestionImages } = useAdmin();
+  const { addQuestionImages, addExplanationImages } = useAdmin();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [imageType, setImageType] = useState("question"); // "question" | "explanation"
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -35,21 +37,29 @@ const EditQuestionImages = ({ paper, questionIndex, onClose }) => {
         formData.append("file", file);
       });
 
-      await addQuestionImages({
-        testId: paper.id,
-        questionIndex,
-        imageFiles: formData,
-      });
-      setMessage({ type: "success", text: "Images uploaded successfully!" });
+      if (imageType === "explanation") {
+        await addExplanationImages({
+          testId: paper.id,
+          questionIndex,
+          imageFiles: formData,
+        });
+        setMessage({ type: "success", text: "Explanation images uploaded successfully!" });
+      } else {
+        await addQuestionImages({
+          testId: paper.id,
+          questionIndex,
+          imageFiles: formData,
+        });
+        setMessage({ type: "success", text: "Question images uploaded successfully!" });
+      }
+
       setTimeout(() => {
         onClose();
       }, 1500);
     } catch (error) {
       setMessage({
         type: "error",
-        text:
-          "Error uploading images: " +
-          (error.response?.data?.message || error.message),
+        text: "Error uploading images: " + (error.response?.data?.message || error.message),
       });
     } finally {
       setUploading(false);
@@ -74,12 +84,9 @@ const EditQuestionImages = ({ paper, questionIndex, onClose }) => {
         >
           <div className="flex justify-between items-center px-6 py-4 border-b border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-black/20 rounded-t-2xl">
             <div className="flex items-center space-x-3">
-              <Image
-                className="text-purple-600 dark:text-purple-400"
-                size={20}
-              />
+              <Image className="text-purple-600 dark:text-purple-400" size={20} />
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                Add Media to Question
+                Add Media
               </h3>
             </div>
             <button
@@ -104,20 +111,45 @@ const EditQuestionImages = ({ paper, questionIndex, onClose }) => {
                   }`}
                 >
                   {message.type === "error" ? (
-                    <AlertCircle
-                      className="mr-2 text-red-600 dark:text-red-500"
-                      size={18}
-                    />
+                    <AlertCircle className="mr-2 text-red-600 dark:text-red-500" size={18} />
                   ) : (
-                    <CheckCircle
-                      className="mr-2 text-emerald-600 dark:text-emerald-500"
-                      size={18}
-                    />
+                    <CheckCircle className="mr-2 text-emerald-600 dark:text-emerald-500" size={18} />
                   )}
                   {message.text}
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Image Type Selector */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-3">
+                Attach To
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setImageType("question")}
+                  className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    imageType === "question"
+                      ? "border-purple-500 bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                      : "border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-purple-300 dark:hover:border-purple-500/30"
+                  }`}
+                >
+                  <Image size={16} />
+                  Question Image
+                </button>
+                <button
+                  onClick={() => setImageType("explanation")}
+                  className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    imageType === "explanation"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                      : "border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:border-blue-300 dark:hover:border-blue-500/30"
+                  }`}
+                >
+                  <BookOpen size={16} />
+                  Explanation Image
+                </button>
+              </div>
+            </div>
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-3">
@@ -157,17 +189,14 @@ const EditQuestionImages = ({ paper, questionIndex, onClose }) => {
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-3">
                   Selected Files:
                 </h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                   {files.map((file, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-300 dark:border-white/10"
                     >
                       <span className="text-sm text-gray-800 dark:text-gray-300 truncate flex-1 mr-2">
-                        <Image
-                          size={14}
-                          className="inline mr-2 text-purple-600 dark:text-purple-400"
-                        />
+                        <Image size={14} className="inline mr-2 text-purple-600 dark:text-purple-400" />
                         {file.name}
                       </span>
                       <button
@@ -193,15 +222,19 @@ const EditQuestionImages = ({ paper, questionIndex, onClose }) => {
               <button
                 onClick={handleUpload}
                 disabled={uploading || files.length === 0}
-                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-[#0f0f0f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center font-medium"
+                className={`px-6 py-2 text-white rounded-lg transition-colors flex items-center font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                  imageType === "explanation"
+                    ? "bg-blue-600 hover:bg-blue-500 focus:ring-2 focus:ring-blue-500"
+                    : "bg-purple-600 hover:bg-purple-500 focus:ring-2 focus:ring-purple-500"
+                }`}
               >
                 {uploading ? (
                   <div className="flex items-center">
                     <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                    Transmitting...
+                    Uploading...
                   </div>
                 ) : (
-                  "Upload Media"
+                  `Upload to ${imageType === "explanation" ? "Explanation" : "Question"}`
                 )}
               </button>
             </div>

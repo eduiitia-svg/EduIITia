@@ -23,14 +23,12 @@ export const getAllTestAttempts = createAsyncThunk(
       const userData = userDoc.data();
       const userRole = userData.role;
 
-
       let allowedCreatorId = null;
 
       if (userRole === "student") {
         allowedCreatorId = userData.createdBy;
       } else if (userRole === "admin") {
         allowedCreatorId = userId;
-      } else if (userRole === "superadmin") {
       }
 
       const questionsRef = collection(db, "questions");
@@ -41,8 +39,10 @@ export const getAllTestAttempts = createAsyncThunk(
       } else if (allowedCreatorId) {
         questionsQuery = query(
           questionsRef,
-          where("createdBy", "==", allowedCreatorId)
+          where("createdBy", "==", allowedCreatorId),
         );
+      } else if (userRole === "student") {
+        questionsQuery = query(questionsRef);
       } else {
         return [];
       }
@@ -75,7 +75,7 @@ export const getAllTestAttempts = createAsyncThunk(
           attemptsRef,
           where("testId", "in", batch),
           where("submittedAt", "!=", null),
-          orderBy("submittedAt", "desc")
+          orderBy("submittedAt", "desc"),
         );
 
         const attemptsSnapshot = await getDocs(attemptsQuery);
@@ -102,7 +102,7 @@ export const getAllTestAttempts = createAsyncThunk(
           const attempts = testAttemptsMap[testId] || [];
 
           const userHasAttempted = attempts.some(
-            (attempt) => attempt.userId === userId
+            (attempt) => attempt.userId === userId,
           );
 
           allTests.push({
@@ -122,7 +122,7 @@ export const getAllTestAttempts = createAsyncThunk(
       console.error("Error fetching test attempts:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const getAttemptsByTest = createAsyncThunk(
@@ -157,7 +157,7 @@ export const getAttemptsByTest = createAsyncThunk(
         attemptsRef,
         where("testId", "==", testId),
         where("submittedAt", "!=", null),
-        orderBy("submittedAt", "desc") 
+        orderBy("submittedAt", "desc"),
       );
 
       const querySnapshot = await getDocs(q);
@@ -188,6 +188,7 @@ export const getAttemptsByTest = createAsyncThunk(
           id: docSnapshot.id,
           score: attemptData.score || 0,
           submittedAt: attemptData.submittedAt?.toDate(),
+          userId: attemptUserId,
           user: {
             _id: attemptUserId,
             name: userName,
@@ -198,12 +199,11 @@ export const getAttemptsByTest = createAsyncThunk(
 
       attempts.sort((a, b) => b.score - a.score);
 
-
       return { data: attempts };
     } catch (error) {
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 export const getTestAttemptsByAdmin = createAsyncThunk(
@@ -232,7 +232,7 @@ export const getTestAttemptsByAdmin = createAsyncThunk(
         attemptsRef,
         where("testId", "==", testId),
         where("submittedAt", "!=", null),
-        orderBy("submittedAt", "desc")
+        orderBy("submittedAt", "desc"),
       );
 
       const querySnapshot = await getDocs(q);
@@ -246,7 +246,7 @@ export const getTestAttemptsByAdmin = createAsyncThunk(
         if (attemptData.userId) {
           try {
             const studentDoc = await getDoc(
-              doc(db, "users", attemptData.userId)
+              doc(db, "users", attemptData.userId),
             );
             if (studentDoc.exists()) {
               const studentData = studentDoc.data();
@@ -273,14 +273,14 @@ export const getTestAttemptsByAdmin = createAsyncThunk(
       console.error("Error fetching admin attempts:", error);
       return rejectWithValue(error.message);
     }
-  }
+  },
 );
 
 const attemptSlice = createSlice({
   name: "attempt",
   initialState: {
-    attemptedTests: [], 
-    leaderboardData: [], 
+    attemptedTests: [],
+    leaderboardData: [],
     testAttempts: [],
     loading: false,
     error: null,
