@@ -21,8 +21,10 @@ import {
   BookOpen,
   Clock,
   Info,
+  ArrowRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -41,6 +43,7 @@ const loadRazorpayScript = () => {
 
 export const Pricing = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const { plans, teacherPlans } = useSelector((state) => state.subscription);
   const { loading: paymentLoading } = useSelector((state) => state.payment);
@@ -88,6 +91,20 @@ export const Pricing = () => {
     dispatch(getPlans());
     dispatch(getAllTeacherPlans());
   }, [dispatch]);
+
+  const handleExploreNow = (plan) => {
+    const mainCategory = plan.mainCategory?.toLowerCase();
+
+    if (
+      mainCategory === "school" ||
+      mainCategory === "entrance" ||
+      mainCategory === "recruitment"
+    ) {
+      navigate(`/study?category=${mainCategory}`);
+    } else {
+      navigate("/test");
+    }
+  };
 
   const handleActivate = async (planId) => {
     if (!user?.uid) {
@@ -482,10 +499,10 @@ export const Pricing = () => {
                       </button>
                     ) : isActive ? (
                       <button
-                        className="w-full py-4 rounded-xl font-bold text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 cursor-default border border-emerald-100 dark:border-emerald-500/20"
-                        disabled
+                        onClick={() => handleExploreNow(plan)}
+                        className="w-full py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 bg-emerald-600 dark:bg-emerald-500 text-white hover:bg-emerald-700 dark:hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-[0.98]"
                       >
-                        Active Plan
+                        Explore Now <ArrowRight size={18} />
                       </button>
                     ) : (
                       <button
